@@ -169,7 +169,7 @@ def single_position_box(puzzle):
     return iteration_runner(iteration)
 
 
-def single_number(puzzle):
+def single_candidate(puzzle):
     """Find squares that are pinned by all their peers to a single number
 
     :type puzzle: Puzzle

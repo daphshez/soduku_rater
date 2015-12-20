@@ -123,7 +123,7 @@ class TestDataStructures(unittest.TestCase):
         self.assertTrue(Puzzle.from_string(non_consistent).is_consistent())
 
 
-class TestSinglePositionBox(unittest.TestCase):
+class TestSingleCandidateBox(unittest.TestCase):
     def test_one_empty_square(self):
         grid = '.' + easy1_solution.strip()[1:]
         puzzle = Puzzle.from_string(grid)
@@ -145,14 +145,14 @@ class TestSingleNumber(unittest.TestCase):
     def test_one_empty_square(self):
         grid = '.' + easy1_solution.strip()[1:]
         puzzle = Puzzle.from_string(grid)
-        assignments = single_number(puzzle)
+        assignments = single_candidate(puzzle)
         self.assertTrue(puzzle.solved())
         self.assertEqual([1, 0], assignments)
         self.assertEqual(compact(easy1_solution), str(puzzle))
 
     def test_grid1(self):
         puzzle = Puzzle.from_string(easy1)
-        assignments = single_number(puzzle)
+        assignments = single_candidate(puzzle)
         self.assertTrue(puzzle.solved())
         self.assertEqual([5, 5, 4, 4, 8, 9, 4, 6, 4, 4, 0], assignments)
 
@@ -168,7 +168,7 @@ if __name__ == '__main__':
     print(puzzle.solved())
     print(puzzle.pretty())
 
-    print(single_number(puzzle))
+    print(single_candidate(puzzle))
     print(puzzle.solved())
     print(puzzle.pretty())
 
