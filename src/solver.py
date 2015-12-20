@@ -19,9 +19,6 @@ class Square:
         self.initial = digit is not None
         self.options = None
 
-    def __eq__(self, other):
-        return self.digit == other
-
     def solved(self):
         return self.digit is not None
 
@@ -44,7 +41,7 @@ class Unit:
         self.squares[key] = square
 
     def __contains__(self, digit):
-        return empty(square for square in self.squares if square == digit)
+        return empty(square for square in self.squares if square.digit == digit)
 
     def solved(self):
         return empty(square for square in self.squares if not square.solved())
@@ -86,12 +83,26 @@ class Puzzle:
     def boxes(self):
         return self.units['box']
 
+    def peers(self, row, col):
+        target = self.__getitem__((row, col))
+        box, _ = find_box(row, col)
+        raw = self.units['row'][row].squares + self.units['col'][col].squares + self.units['box'][box].squares
+        return [s for s in raw if s != target]
+
+    def is_consistent(self):
+        def is_consistent_square(s):
+            return True
+        squares = (square for row in self.units['row'] for square in row)
+        consistent = (is_consistent_square(s) for s in squares)
+        return False not in consistent
+
+
     @classmethod
     def from_string(cls, s):
         puzzle = cls()
         # magick! remove everything that isn't a digit ot a . and convert to integers
         characters = [int(c) if c.isdigit() else None for c in s if c.isdigit() or c == '.']
-        assert len(characters) == 81
+        assert len(characters) == 81, len(characters)
         for i, v in enumerate(characters):
             row, col = find_row_col(i)
             puzzle[(row, col)] = Square(row, col, v)

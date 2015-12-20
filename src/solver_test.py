@@ -4,6 +4,35 @@ from solver import *
 from itertools import product
 
 
+grid1 = """
+. . .|1 . 6|. . .
+. 6 5|. . .|9 4 .
+. . 7|. . .|8 . .
+-----+-----+-----
+. 5 8|. 4 .|1 7 .
+. . .|9 . 1|. . .
+. 4 9|. 8 .|6 3 .
+-----+-----+-----
+. . 3|. . .|5 . .
+. 8 2|. . .|7 1 .
+. . .|3 . 2|. . .
+"""
+
+grid1_solution = """
+824 196 357
+365 728 941
+917 435 826
+
+258 643 179
+736 951 284
+149 287 635
+
+673 814 592
+482 569 713
+591 372 468
+"""
+
+
 class TestDataStructures(unittest.TestCase):
     def test_find_box(self):
         self.assertEqual(find_box(0, 0), (0, 0))
@@ -84,5 +113,11 @@ class TestDataStructures(unittest.TestCase):
 
         puzzle = Puzzle.from_string(fiendish_7862)
         self.assertTrue(puzzle.ready())
-        print(str(puzzle))
         self.assertEqual(str(puzzle), fiendish_7862_compact)
+
+    def test_puzzle_is_consistent(self):
+        self.assertTrue(Puzzle.from_string(grid1_solution).is_consistent())
+        non_consistent = '1' + grid1_solution.strip()[1:]
+        self.assertTrue(Puzzle.from_string(non_consistent).is_consistent())
+
+
