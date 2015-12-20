@@ -134,3 +134,11 @@ class TestSinglePositionBox(unittest.TestCase):
         self.assertTrue(puzzle.solved())
         self.assertEqual(1, n_iter)
         self.assertEqual(compact(grid1_solution), str(puzzle))
+
+    def test_grid1(self):
+        puzzle = Puzzle.from_string(grid1)
+        n_iter = single_position_box(puzzle)
+        self.assertEqual(n_iter, 2)
+        self.assertFalse(puzzle.solved())
+        expected_state = '...1.63.7.65...941.17...8...58.4.179...9.1...149.8.63...3.1.5...82...713..13.2...'
+        self.assertEqual(expected_state, str(puzzle))
