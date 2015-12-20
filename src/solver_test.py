@@ -125,7 +125,6 @@ class TestDataStructures(unittest.TestCase):
         self.assertTrue(Puzzle.from_string(non_consistent).is_consistent())
 
 
-
 class TestSinglePositionBox(unittest.TestCase):
     def test_one_empty_square(self):
         grid = '.' + grid1_solution.strip()[1:]
@@ -142,3 +141,23 @@ class TestSinglePositionBox(unittest.TestCase):
         self.assertFalse(puzzle.solved())
         expected_state = '...1.63.7.65...941.17...8...58.4.179...9.1...149.8.63...3.1.5...82...713..13.2...'
         self.assertEqual(expected_state, str(puzzle))
+
+
+class TestSingleNumber(unittest.TestCase):
+    def test_one_empty_square(self):
+        grid = '.' + grid1_solution.strip()[1:]
+        puzzle = Puzzle.from_string(grid)
+        assignments = single_number(puzzle)
+        self.assertTrue(puzzle.solved())
+        self.assertEqual([1, 0], assignments)
+        self.assertEqual(compact(grid1_solution), str(puzzle))
+
+    def test_grid1(self):
+        puzzle = Puzzle.from_string(grid1)
+        assignments = single_number(puzzle)
+        print(assignments)
+        print(puzzle.pretty())
+        # self.assertEqual(n_iter, 2)
+        # self.assertFalse(puzzle.solved())
+        # expected_state = '...1.63.7.65...941.17...8...58.4.179...9.1...149.8.63...3.1.5...82...713..13.2...'
+        # self.assertEqual(expected_state, str(puzzle))

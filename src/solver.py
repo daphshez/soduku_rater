@@ -83,6 +83,9 @@ class Puzzle:
     def boxes(self):
         return self.units['box']
 
+    def missing(self):
+        return (square for unit in self.units['row'] for square in unit.missing())
+
     def peers(self, row, col):
         target = self.__getitem__((row, col))
         box, _ = find_box(row, col)
@@ -156,3 +159,26 @@ def single_position_box(puzzle):
         if not iteration():
             return counter
         counter += 1
+
+
+def single_number(puzzle):
+    """Find squares that are pinned by all their peers to a single number
+
+    :type puzzle: Puzzle
+    """
+    superset = set(range(1, 10))
+    def iteration():
+        assignments = 0
+        for square in puzzle.missing():
+            peer_digit_set = set(peer.digit for peer in puzzle.peers(square.row, square.col) if peer.digit is not None)
+            if len(peer_digit_set) == 8:
+                square.digit = superset.difference(peer_digit_set).pop()
+                assignments += 1
+        return assignments
+
+    assignments = []
+    while True:
+        assignments.append(iteration())
+        if assignments[-1] == 0:
+            break
+    return assignments
