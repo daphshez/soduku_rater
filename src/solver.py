@@ -124,6 +124,20 @@ class Puzzle:
                                '%s %s %s' % (do_row(6), do_row(7), do_row(8))])
 
 
+
+def iteration_runner(f):
+    """Runs the function f indefinitely until it returns 0. Returns the list of value returned by f.
+
+    :type f: function
+    :rtype: list[int]
+    """
+    assignments = []
+    while True:
+        assignments.append(f())
+        if assignments[-1] == 0:
+            break
+    return assignments
+
 # Iterate over digits. For each number, iterate over boxes missing the
 # If the box doesn't contain the number, iterate over square and see how many of them could take
 # the number based on col\row sets
@@ -131,7 +145,7 @@ def single_position_box(puzzle):
     """Check if the rows and columns pin a single position on boxes. Returns number of iterations to convergence.
 
     :type puzzle: Puzzle
-    :rtype: int
+    :rtype: list[int]
     """
 
     def single_position_box_digit(box, digit):
@@ -140,25 +154,19 @@ def single_position_box(puzzle):
                    and digit not in puzzle.unit('col', square.col)]
         if len(squares) == 1:
             squares[0].digit = digit
-            return True
-        return False
+            return 1
+        return 0
 
     def digit_iteration(digit):
-        """Returns true if at least one square was assigned"""
+        """Returns the number of squares assigned"""
         digit_missing = [box for box in puzzle.boxes() if digit not in box]
-        result = [single_position_box_digit(box, digit) for box in digit_missing]
-        return True in result
+        return sum(single_position_box_digit(box, digit) for box in digit_missing)
 
     def iteration():
-        """Returns true if at least one square was assigned"""
-        result = [digit_iteration(digit) for digit in range(1, 10)]
-        return True in result
+        """Returns the number of squares assigned"""
+        return sum(digit_iteration(digit) for digit in range(1, 10))
 
-    counter = 0
-    while True:
-        if not iteration():
-            return counter
-        counter += 1
+    return iteration_runner(iteration)
 
 
 def single_number(puzzle):
@@ -176,9 +184,4 @@ def single_number(puzzle):
                 assignments += 1
         return assignments
 
-    assignments = []
-    while True:
-        assignments.append(iteration())
-        if assignments[-1] == 0:
-            break
-    return assignments
+    return iteration_runner(iteration)
