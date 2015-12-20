@@ -92,10 +92,10 @@ class Puzzle:
     def is_consistent(self):
         def is_consistent_square(s):
             return True
+
         squares = (square for row in self.units['row'] for square in row)
         consistent = (is_consistent_square(s) for s in squares)
         return False not in consistent
-
 
     @classmethod
     def from_string(cls, s):
@@ -111,7 +111,14 @@ class Puzzle:
     def __str__(self):
         return ''.join(str(row) for row in self.units['row'])
 
+    def pretty(self):
+        def do_row(row):
+            return '%s %s %s | %s %s %s | %s %s %s\n' % tuple(str(square) for square in self.units['row'][row])
 
+        separator = '------+-------+--------\n'
+        return separator.join(['%s %s %s' % (do_row(0), do_row(1), do_row(2)),
+                               '%s %s %s' % (do_row(3), do_row(4), do_row(5)),
+                               '%s %s %s' % (do_row(6), do_row(7), do_row(8))])
 
 
 # Iterate over digits. For each number, iterate over boxes missing the
