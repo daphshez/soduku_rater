@@ -32,6 +32,10 @@ grid1_solution = """
 591 372 468
 """
 
+def compact(grid_string):
+    return ''.join(c for c in grid_string if c.isdigit() or c == '.')
+
+
 
 class TestDataStructures(unittest.TestCase):
     def test_find_box(self):
@@ -121,3 +125,12 @@ class TestDataStructures(unittest.TestCase):
         self.assertTrue(Puzzle.from_string(non_consistent).is_consistent())
 
 
+
+class TestSinglePositionBox(unittest.TestCase):
+    def test_one_empty_square(self):
+        grid = '.' + grid1_solution.strip()[1:]
+        puzzle = Puzzle.from_string(grid)
+        n_iter = single_position_box(puzzle)
+        self.assertTrue(puzzle.solved())
+        self.assertEqual(1, n_iter)
+        self.assertEqual(compact(grid1_solution), str(puzzle))

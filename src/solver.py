@@ -41,7 +41,7 @@ class Unit:
         self.squares[key] = square
 
     def __contains__(self, digit):
-        return empty(square for square in self.squares if square.digit == digit)
+        return not empty(square for square in self.squares if square.digit == digit)
 
     def solved(self):
         return empty(square for square in self.squares if not square.solved())
@@ -75,7 +75,7 @@ class Puzzle:
         return False not in available
 
     def solved(self):
-        return empty(unit for unit in self.units['boxes'] if not unit.solved())
+        return empty(unit for unit in self.units['box'] if not unit.solved())
 
     def unit(self, unit_type, unit_number):
         return self.units[unit_type][unit_number]
