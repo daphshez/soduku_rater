@@ -80,9 +80,6 @@ class Puzzle:
     def unit(self, unit_type, unit_number):
         return self.units[unit_type][unit_number]
 
-    def boxes(self):
-        return self.units['box']
-
     def missing(self):
         return (square for unit in self.units['row'] for square in unit.missing())
 
@@ -159,7 +156,7 @@ def single_position_box(puzzle):
 
     def digit_iteration(digit):
         """Returns the number of squares assigned"""
-        digit_missing = [box for box in puzzle.boxes() if digit not in box]
+        digit_missing = [box for box in puzzle.units['box'] if digit not in box]
         return sum(single_position_box_digit(box, digit) for box in digit_missing)
 
     def iteration():
