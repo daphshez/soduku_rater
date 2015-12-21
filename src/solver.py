@@ -1,3 +1,6 @@
+from itertools import product
+
+
 def empty(iter):
     return next(iter, None) is None
 
@@ -83,11 +86,15 @@ class Puzzle:
     def missing(self):
         return (square for unit in self.units['row'] for square in unit.missing())
 
-    def peers(self, row, col):
-        target = self.__getitem__((row, col))
+    def peers(self, square):
+        row = square.row
+        col = square.col
         box, _ = find_box(row, col)
         raw = self.units['row'][row].squares + self.units['col'][col].squares + self.units['box'][box].squares
-        return [s for s in raw if s != target]
+        return (s for s in raw if s != square)
+
+    def set_to(self, digit):
+        return (square for row in self.units['row'] for square in row if square.digit == digit)
 
     def is_consistent(self):
         def is_consistent_square(s):
@@ -121,7 +128,6 @@ class Puzzle:
                                '%s %s %s' % (do_row(6), do_row(7), do_row(8))])
 
 
-
 def iteration_runner(f):
     """Runs the function f indefinitely until it returns 0. Returns the list of value returned by f.
 
@@ -134,6 +140,7 @@ def iteration_runner(f):
         if assignments[-1] == 0:
             break
     return assignments
+
 
 # Iterate over digits. For each number, iterate over boxes missing the
 # If the box doesn't contain the number, iterate over square and see how many of them could take
@@ -172,13 +179,38 @@ def single_candidate(puzzle):
     :type puzzle: Puzzle
     """
     superset = set(range(1, 10))
+
     def iteration():
         assignments = 0
         for square in puzzle.missing():
-            peer_digit_set = set(peer.digit for peer in puzzle.peers(square.row, square.col) if peer.digit is not None)
+            peer_digit_set = set(peer.digit for peer in puzzle.peers(square) if peer.digit is not None)
             if len(peer_digit_set) == 8:
                 square.digit = superset.difference(peer_digit_set).pop()
                 assignments += 1
         return assignments
+
+    return iteration_runner(iteration)
+
+
+def single_position_by_color(puzzle):
+    def iteration_for_digit(digit, unit_type):
+        def find_only_position(unit):
+            # looks for a single non-colored empty square
+            # if found one, set the value to digit and return 1, else return 0
+            empty_squares = set(square for square in unit if square.digit is None)
+            non_colored_empty_squares = empty_squares.difference(colored_out)
+            if len(non_colored_empty_squares) == 1:
+                square = non_colored_empty_squares.pop()
+                square.digit = digit
+                return 1
+            return 0
+
+        colored_out = set(peer for square in puzzle.set_to(digit) for peer in puzzle.peers(square))
+        units_in_need = [unit for unit in puzzle.units[unit_type] if digit not in unit]
+        return sum(find_only_position(unit) for unit in units_in_need)
+
+    def iteration():
+        return sum(iteration_for_digit(digit, unit_type) for unit_type, digit in
+                   product(('row', 'col', 'box'), range(1, 10)))
 
     return iteration_runner(iteration)

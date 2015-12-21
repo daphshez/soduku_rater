@@ -123,38 +123,23 @@ class TestDataStructures(unittest.TestCase):
         self.assertTrue(Puzzle.from_string(non_consistent).is_consistent())
 
 
-class TestSingleCandidateBox(unittest.TestCase):
-    def test_one_empty_square(self):
+class TestOneEmptySquare(unittest.TestCase):
+    def runner(self, f):
         grid = '.' + easy1_solution.strip()[1:]
         puzzle = Puzzle.from_string(grid)
-        n_iter = single_position_box(puzzle)
+        assignments_per_iter = f(puzzle)
+        self.assertEqual(assignments_per_iter, [1, 0])
         self.assertTrue(puzzle.solved())
-        self.assertEqual([1, 0], n_iter)
         self.assertEqual(compact(easy1_solution), str(puzzle))
 
-    def test_grid1(self):
-        puzzle = Puzzle.from_string(easy1)
-        assignments = single_position_box(puzzle)
-        self.assertEqual([3, 6, 0], assignments)
-        self.assertFalse(puzzle.solved())
-        expected_state = '...1.63.7.65...941.17...8...58.4.179...9.1...149.8.63...3.1.5...82...713..13.2...'
-        self.assertEqual(expected_state, str(puzzle))
+    def test_single_position_box(self):
+        self.runner(single_position_box)
 
+    def test_single_candidate(self):
+        self.runner(single_candidate)
 
-class TestSingleNumber(unittest.TestCase):
-    def test_one_empty_square(self):
-        grid = '.' + easy1_solution.strip()[1:]
-        puzzle = Puzzle.from_string(grid)
-        assignments = single_candidate(puzzle)
-        self.assertTrue(puzzle.solved())
-        self.assertEqual([1, 0], assignments)
-        self.assertEqual(compact(easy1_solution), str(puzzle))
-
-    def test_grid1(self):
-        puzzle = Puzzle.from_string(easy1)
-        assignments = single_candidate(puzzle)
-        self.assertTrue(puzzle.solved())
-        self.assertEqual([5, 5, 4, 4, 8, 9, 4, 6, 4, 4, 0], assignments)
+    def test_single_position_color(self):
+        self.runner(single_position_by_color)
 
 
 if __name__ == '__main__':
@@ -162,16 +147,30 @@ if __name__ == '__main__':
     # single_number solves it, but it takes 11 iterations
     # running single_position_box first doesn't reduce the number of iterations
 
-    # fiendish doesn't lend itself much to either single_position_box or single_number
-    puzzle = Puzzle.from_string(fiendish_7862)
-    print(single_position_box(puzzle))
+    # single_position_by_color performance on easy1: [11, 13, 14, 14, 1, 0]
+    # single_position_box performance on easy1: [3, 6, 0]
+    puzzle = Puzzle.from_string(easy1)
+    print(single_position_by_color(puzzle))
     print(puzzle.solved())
     print(puzzle.pretty())
 
+    # single candidate performance on easy1, by running first: [5, 5, 4, 4, 8, 9, 4, 6, 4, 4, 0]
+    # after single_position_box:                               [4, 4, 3, 3, 7, 6, 3, 6, 4, 4, 0]
     print(single_candidate(puzzle))
     print(puzzle.solved())
     print(puzzle.pretty())
 
-    print(single_position_box(puzzle))
-    print(puzzle.solved())
-    print(puzzle.pretty())
+    # fiendish doesn't lend itself much to either single_position_box or single_number
+    # puzzle = Puzzle.from_string(fiendish_7862)
+    # print(single_position_box(puzzle))
+    # print(puzzle.solved())
+    # print(puzzle.pretty())
+    #
+    # print(single_candidate(puzzle))
+    # print(puzzle.solved())
+    # print(puzzle.pretty())
+    #
+    # print(single_position_box(puzzle))
+    # print(puzzle.solved())
+    # print(puzzle.pretty())
+    #
