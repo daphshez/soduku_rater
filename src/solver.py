@@ -216,7 +216,7 @@ def single_position_by_color(puzzle):
     return iteration_runner(iteration)
 
 
-def generate_pencilmarks(puzzle):
+def single_candidate(puzzle):
     all = set(range(1, 10))
     for square in puzzle.missing():
         peer_digits = set(peer.digit for peer in puzzle.peers(square) if peer.digit is not None)
