@@ -20,7 +20,7 @@ class Square:
         self.col = col
         self.digit = digit
         self.initial = digit is not None
-        self.options = None
+        self.pencilmarks = None
 
     def solved(self):
         return self.digit is not None
@@ -214,3 +214,10 @@ def single_position_by_color(puzzle):
                    product(('row', 'col', 'box'), range(1, 10)))
 
     return iteration_runner(iteration)
+
+
+def generate_pencilmarks(puzzle):
+    all = set(range(1, 10))
+    for square in puzzle.missing():
+        peer_digits = set(peer.digit for peer in puzzle.peers(square) if peer.digit is not None)
+        square.pencilmarks = all.difference(peer_digits)
