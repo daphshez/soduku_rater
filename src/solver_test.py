@@ -31,6 +31,19 @@ easy1_solution = """
 591 372 468
 """
 
+beginner1 = """
+.89 2.7 .6.
+652 .38 71.
+7.. .61 .9.
+
+5.3 8.9 .4.
+476 ... 8.9
+... 6.4 537
+
+.6. 41. ..2
+.4. 79. ...
+.1. ..2 45."""
+
 fiendish_7862 = """
         . . .| . . . | . 9 .
         1 . .| . . . | 8 . 2
@@ -147,18 +160,25 @@ if __name__ == '__main__':
     # single_number solves it, but it takes 11 iterations
     # running single_position_box first doesn't reduce the number of iterations
 
-    # single_position_by_color performance on easy1: [11, 13, 14, 14, 1, 0]
-    # single_position_box performance on easy1: [3, 6, 0]
     puzzle = Puzzle.from_string(easy1)
-    print(single_position_by_color(puzzle))
+    print("single_position_by_color", "easy1", single_position_by_color(puzzle))
     print(puzzle.solved())
-    print(puzzle.pretty())
 
     # single candidate performance on easy1, by running first: [5, 5, 4, 4, 8, 9, 4, 6, 4, 4, 0]
     # after single_position_box:                               [4, 4, 3, 3, 7, 6, 3, 6, 4, 4, 0]
-    print(single_candidate(puzzle))
+    puzzle = Puzzle.from_string(easy1)
+    print("single_candidate", "easy1", single_candidate(puzzle))
     print(puzzle.solved())
-    print(puzzle.pretty())
+
+
+    puzzle = Puzzle.from_string(beginner1)
+    print("single_position_by_color", "beginner1", single_position_by_color(puzzle))   # [36, 3, 0]
+    print(puzzle.solved())
+
+    puzzle = Puzzle.from_string(beginner1)
+    print("single_position_by_color", "beginner1", single_candidate(puzzle))
+    print(puzzle.solved())
+
 
     # fiendish doesn't lend itself much to either single_position_box or single_number
     # puzzle = Puzzle.from_string(fiendish_7862)
