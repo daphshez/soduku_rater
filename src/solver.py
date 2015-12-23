@@ -1,8 +1,8 @@
 from itertools import product
 
 
-def empty(iter):
-    return next(iter, None) is None
+def empty(it):
+    return next(it, None) is None
 
 
 def find_box(row, col):
@@ -20,7 +20,6 @@ class Square:
         self.col = col
         self.digit = digit
         self.initial = digit is not None
-        self.pencilmarks = None
 
     def solved(self):
         return self.digit is not None
@@ -63,6 +62,10 @@ class Puzzle:
                       'row': [Unit() for _ in range(9)]}
 
     def __getitem__(self, key):
+        """
+        :type key: (int, int)
+        :rtype: Square
+        """
         return self.units['row'][key[0]][key[1]]
 
     def __setitem__(self, key, value):
@@ -84,24 +87,33 @@ class Puzzle:
         return self.units[unit_type][unit_number]
 
     def missing(self):
+        """Returns generator of all empty squares.
+
+        :rtype: collections.Iterable[Square]
+        """
         return (square for unit in self.units['row'] for square in unit.missing())
 
     def peers(self, square):
+        """Returns all the peers of the input square.
+
+        :type square: Square
+        :return: collections.Iterable[Square]
+        """
         row = square.row
         col = square.col
         box, _ = find_box(row, col)
         raw = self.units['row'][row].squares + self.units['col'][col].squares + self.units['box'][box].squares
         return (s for s in raw if s != square)
 
+    def peer_values(self, square):
+        return set(peer.digit for peer in self.peers(square) if peer.digit is not None)
+
     def set_to(self, digit):
         return (square for row in self.units['row'] for square in row if square.digit == digit)
 
     def is_consistent(self):
-        def is_consistent_square(s):
-            return True
-
         squares = (square for row in self.units['row'] for square in row)
-        consistent = (is_consistent_square(s) for s in squares)
+        consistent = (s.digit not in self.peer_values(s) for s in squares if s.digit is not None)
         return False not in consistent
 
     @classmethod
@@ -216,8 +228,21 @@ def single_position_by_color(puzzle):
     return iteration_runner(iteration)
 
 
-def single_candidate(puzzle):
-    all = set(range(1, 10))
-    for square in puzzle.missing():
-        peer_digits = set(peer.digit for peer in puzzle.peers(square) if peer.digit is not None)
-        square.pencilmarks = all.difference(peer_digits)
+def pencil_mark(puzzle):
+    """Returns a map from puzzle location (row, col) to set pencil marks based on peer values
+
+    :type puzzle: Puzzle
+    :rtype: dict[(int, int), set]
+    """
+    digits = set(range(1, 10))
+    return {(square.row, square.col): digits.difference(puzzle.peer_values(square))
+            for square in puzzle.missing()}
+
+
+def single_candidate_by_pencil_marks(puzzle):
+    """Iteratively uses pencil marks to identify cells that have one candidate
+
+    :param puzzle: Puzzle
+    :rtype: [int]
+    """
+    pass

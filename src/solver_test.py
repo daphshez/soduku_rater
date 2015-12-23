@@ -133,7 +133,7 @@ class TestDataStructures(unittest.TestCase):
     def test_puzzle_is_consistent(self):
         self.assertTrue(Puzzle.from_string(easy1_solution).is_consistent())
         non_consistent = '1' + easy1_solution.strip()[1:]
-        self.assertTrue(Puzzle.from_string(non_consistent).is_consistent())
+        self.assertFalse(Puzzle.from_string(non_consistent).is_consistent())
 
 
 class TestOneEmptySquare(unittest.TestCase):
@@ -153,6 +153,15 @@ class TestOneEmptySquare(unittest.TestCase):
 
     def test_single_position_color(self):
         self.runner(single_position_by_color)
+
+
+class TestPencilMark(unittest.TestCase):
+    def test_one_empty_square(self):
+        grid = '.' + easy1_solution.strip()[1:]
+        puzzle = Puzzle.from_string(grid)
+        marks = pencil_mark(puzzle)
+        self.assertEqual(marks[(0,0)], {8})
+
 
 
 if __name__ == '__main__':
