@@ -201,7 +201,7 @@ if __name__ == '__main__':
     print("single_position_by_color", "beginner1", single_candidate(puzzle))
     print(puzzle.solved())
 
-
+    show(puzzle)
     # fiendish doesn't lend itself much to either single_position_box or single_number
     # puzzle = Puzzle.from_string(fiendish_7862)
     # print(single_position_box(puzzle))

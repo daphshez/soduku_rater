@@ -1,4 +1,5 @@
 from itertools import product
+from PIL import Image, ImageFont, ImageDraw
 
 
 def empty(it):
@@ -157,6 +158,16 @@ class PencilMarks:
 
     def single_candidate(self):
         return (self.puzzle[(r, c)] for (r, c) in self.marks if len(self.marks))
+
+
+def show(puzzle, pencil_marks=None):
+    img = Image.open(r'../resources/SudokuBg.png')
+    #font = ImageFont.truetype("sans-serif.ttf", 16)
+    font = ImageFont.load_default()
+    draw = ImageDraw.Draw(img)
+    draw.text((0, 0),"Sample Text",(0,0,0),font=font)
+    img.show()
+
 
 
 def iteration_runner(f):
