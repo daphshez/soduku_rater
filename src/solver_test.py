@@ -154,13 +154,21 @@ class TestOneEmptySquare(unittest.TestCase):
     def test_single_position_color(self):
         self.runner(single_position_by_color)
 
+    def test_single_candidate_by_pencil_marks(self):
+        grid = '.' + easy1_solution.strip()[1:]
+        puzzle = Puzzle.from_string(grid)
+        pencil_marks = PencilMarks(puzzle)
+        assignments_per_iter = single_candidate_by_pencil_marks(puzzle, pencil_marks)
+        self.assertEqual(assignments_per_iter, [1, 0])
+        self.assertTrue(puzzle.solved())
+        self.assertEqual(compact(easy1_solution), str(puzzle))
 
 class TestPencilMark(unittest.TestCase):
     def test_one_empty_square(self):
         grid = '.' + easy1_solution.strip()[1:]
         puzzle = Puzzle.from_string(grid)
-        marks = pencil_mark(puzzle)
-        self.assertEqual(marks[(0,0)], {8})
+        marks = PencilMarks(puzzle)
+        self.assertEqual(marks[puzzle[(0,0)]], {8})
 
 
 
@@ -177,6 +185,11 @@ if __name__ == '__main__':
     # after single_position_box:                               [4, 4, 3, 3, 7, 6, 3, 6, 4, 4, 0]
     puzzle = Puzzle.from_string(easy1)
     print("single_candidate", "easy1", single_candidate(puzzle))
+    print(puzzle.solved())
+
+    puzzle = Puzzle.from_string(easy1)
+    pencil_marks = PencilMarks(puzzle)
+    print("single_candidate_by_pencil_marks", "easy1", single_candidate_by_pencil_marks(puzzle, pencil_marks))
     print(puzzle.solved())
 
 

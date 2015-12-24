@@ -140,6 +140,25 @@ class Puzzle:
                                '%s %s %s' % (do_row(6), do_row(7), do_row(8))])
 
 
+class PencilMarks:
+    digits = set(range(1, 10))
+
+    def __init__(self, puzzle):
+        self.puzzle = puzzle
+        self.marks = {}
+        self.update()
+
+    def __getitem__(self, square):
+        return self.marks[(square.row, square.col)]
+
+    def update(self):
+        self.marks = {(square.row, square.col): PencilMarks.digits.difference(self.puzzle.peer_values(square))
+                      for square in self.puzzle.missing()}
+
+    def single_candidate(self):
+        return (self.puzzle[(r, c)] for (r, c) in self.marks if len(self.marks))
+
+
 def iteration_runner(f):
     """Runs the function f indefinitely until it returns 0. Returns the list of value returned by f.
 
@@ -228,21 +247,18 @@ def single_position_by_color(puzzle):
     return iteration_runner(iteration)
 
 
-def pencil_mark(puzzle):
-    """Returns a map from puzzle location (row, col) to set pencil marks based on peer values
-
-    :type puzzle: Puzzle
-    :rtype: dict[(int, int), set]
-    """
-    digits = set(range(1, 10))
-    return {(square.row, square.col): digits.difference(puzzle.peer_values(square))
-            for square in puzzle.missing()}
-
-
-def single_candidate_by_pencil_marks(puzzle):
+def single_candidate_by_pencil_marks(puzzle, pencil_marks):
     """Iteratively uses pencil marks to identify cells that have one candidate
 
     :param puzzle: Puzzle
+    :param pencil_marks: PencilMarks
     :rtype: [int]
     """
-    pass
+    def iteration():
+        to_assign = list(pencil_marks.single_candidate())
+        for i, square in enumerate(to_assign):
+            square.digit = pencil_marks[square].pop()
+        pencil_marks.update()
+        return len(to_assign)
+
+    return iteration_runner(iteration)
