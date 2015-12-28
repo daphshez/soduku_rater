@@ -161,11 +161,43 @@ class PencilMarks:
 
 
 def show(puzzle, pencil_marks=None):
-    img = Image.open(r'../resources/SudokuBg.png')
+    margin = 10
+    border = 2
+    square_size = 36
+    box_size = 3 * square_size + 2 * border
+    size = margin * 2 + border * 10 + square_size * 9
+    gray = (160, 160, 160)
+    img = Image.new('RGB', (size, size), color='white')
+    draw = ImageDraw.Draw(img)
+
+    def square_tl(row, col):
+        t = margin + (col + 1) * border + col * square_size
+        l = margin + (row + 1) * border + row * square_size
+        return t, l
+
+
+    def draw_grid():
+        # draw major grid
+        draw.rectangle([(margin, margin), (size-margin, size-margin)], outline='black', fill='black')
+        for i, j in product(range(3), range(3)):
+            t = margin + (i + 1) * border + i * box_size
+            l = margin + (j + 1) * border + j * box_size
+            draw.rectangle([(t, l), (t + box_size - 1, l + box_size - 1)], fill=gray)
+
+        # draw minor grid
+        #draw.rectangle([(margin, margin), (size-margin, size-margin)], outline=gray, fill=gray)
+        for row, col in product(range(9), range(9)):
+            t, l = square_tl(row, col)
+            draw.rectangle([(t, l), (t + square_size - 1, l + square_size - 1)], fill='white')
+
+    draw_grid()
+
+    # img = Image.open(r'../resources/SudokuBg.png')
     #font = ImageFont.truetype("sans-serif.ttf", 16)
     font = ImageFont.load_default()
-    draw = ImageDraw.Draw(img)
-    draw.text((0, 0),"Sample Text",(0,0,0),font=font)
+
+    #draw.text((0, 0),"Sample Text",(0,0,0),font=font)
+    img.save('../result.png')
     img.show()
 
 
