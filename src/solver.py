@@ -152,6 +152,9 @@ class PencilMarks:
     def __getitem__(self, square):
         return self.marks[(square.row, square.col)]
 
+    def __contains__(self, square):
+        return (square.row, square.col) in self.marks
+
     def update(self):
         self.marks = {(square.row, square.col): PencilMarks.digits.difference(self.puzzle.peer_values(square))
                       for square in self.puzzle.missing()}
@@ -160,21 +163,28 @@ class PencilMarks:
         return (self.puzzle[(r, c)] for (r, c) in self.marks if len(self.marks))
 
 
-def show(puzzle, pencil_marks=None):
+
+
+def show(puzzle, pencil_marks=None, file_name='../result.png'):
     margin = 10
     border = 2
-    square_size = 36
+    pencil_mark_border = 2
+    pencil_mark_square_size = 12
+    square_size = pencil_mark_square_size * 3 + pencil_mark_border * 4
     box_size = 3 * square_size + 2 * border
     size = margin * 2 + border * 10 + square_size * 9
     gray = (160, 160, 160)
     img = Image.new('RGB', (size, size), color='white')
     draw = ImageDraw.Draw(img)
 
+    pencil_marks_font = ImageFont.truetype("../fonts/SourceCodePro-Medium.ttf", 10)
+    solved_font = ImageFont.truetype("../fonts/SourceCodePro-Medium.ttf", 24)
+    given_font = ImageFont.truetype("../fonts/SourceCodePro-Bold.ttf", 24)
+
     def square_tl(row, col):
         t = margin + (col + 1) * border + col * square_size
         l = margin + (row + 1) * border + row * square_size
         return t, l
-
 
     def draw_grid():
         # draw major grid
@@ -190,25 +200,33 @@ def show(puzzle, pencil_marks=None):
             t, l = square_tl(row, col)
             draw.rectangle([(t, l), (t + square_size - 1, l + square_size - 1)], fill='white')
 
+    def draw_digits():
+        for row, col in product(range(9), range(9)):
+            square = puzzle[(row, col)]
+            if square.solved():
+                font = given_font if square.given else solved_font
+                w, h = 15, 12     # these are measurement from the results, font.getsize() not helpful
+                t_offset, l_offset = 10, 2
+                t, l = square_tl(row, col)
+                t = t + square_size // 2 - h // 2 - t_offset
+                l = l + square_size // 2 - w // 2 - l_offset
+                draw.text((l, t),str(square.digit),(0,0,0),font=font)
+            elif square in pencil_marks:
+                for digit in pencil_marks[square]:
+                    draw_pencil_mark(row, col, digit)
+
+    def draw_pencil_mark(row, col, digit):
+        t, l = square_tl(row, col)
+        pencil_mark_row = (digit - 1) // 3
+        pencil_mark_col = (digit - 1) % 3
+        print(digit, pencil_mark_row, pencil_mark_col)
+        l = l + (pencil_mark_col + 1) * pencil_mark_border + pencil_mark_col * pencil_mark_square_size + 3
+        t = t + (pencil_mark_row + 1) * pencil_mark_border + pencil_mark_row * pencil_mark_square_size
+        draw.text((l, t),str(digit),(100, 100, 100),font=pencil_marks_font)
+
     draw_grid()
-
-    pencil_marks_font = ImageFont.truetype("../fonts/SourceCodePro-Medium.ttf", 12)
-    solved_font = ImageFont.truetype("../fonts/SourceCodePro-Medium.ttf", 24)
-    given_font = ImageFont.truetype("../fonts/SourceCodePro-Bold.ttf", 24)
-
-    for row, col in product(range(9), range(9)):
-        square = puzzle[(row, col)]
-        if square.solved():
-            font = given_font if square.given else solved_font
-            w, h = 15, 12     # these are measurement from the results, font.getsize() not helpful
-            t_offset, l_offset = 10, 2
-            t, l = square_tl(row, col)
-            t = t + square_size // 2 - h // 2 - t_offset
-            l = l + square_size // 2 - w // 2 - l_offset
-            draw.text((l, t),str(square.digit),(0,0,0),font=font)
-
-
-    img.save('../result.png')
+    draw_digits()
+    img.save(file_name)
     img.show()
 
 
