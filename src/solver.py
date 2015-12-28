@@ -20,7 +20,7 @@ class Square:
         self.row = row
         self.col = col
         self.digit = digit
-        self.initial = digit is not None
+        self.given = digit is not None
 
     def solved(self):
         return self.digit is not None
@@ -192,11 +192,22 @@ def show(puzzle, pencil_marks=None):
 
     draw_grid()
 
-    # img = Image.open(r'../resources/SudokuBg.png')
-    #font = ImageFont.truetype("sans-serif.ttf", 16)
-    font = ImageFont.load_default()
+    pencil_marks_font = ImageFont.truetype("../fonts/SourceCodePro-Medium.ttf", 12)
+    solved_font = ImageFont.truetype("../fonts/SourceCodePro-Medium.ttf", 24)
+    given_font = ImageFont.truetype("../fonts/SourceCodePro-Bold.ttf", 24)
 
-    #draw.text((0, 0),"Sample Text",(0,0,0),font=font)
+    for row, col in product(range(9), range(9)):
+        square = puzzle[(row, col)]
+        if square.solved():
+            font = given_font if square.given else solved_font
+            w, h = 15, 12     # these are measurement from the results, font.getsize() not helpful
+            t_offset, l_offset = 10, 2
+            t, l = square_tl(row, col)
+            t = t + square_size // 2 - h // 2 - t_offset
+            l = l + square_size // 2 - w // 2 - l_offset
+            draw.text((l, t),str(square.digit),(0,0,0),font=font)
+
+
     img.save('../result.png')
     img.show()
 
