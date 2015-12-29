@@ -213,7 +213,7 @@ def show(puzzle, pencil_marks=None, file_name='../result.png'):
                 t = t + square_size // 2 - h // 2 - t_offset
                 l = l + square_size // 2 - w // 2 - l_offset
                 draw.text((l, t), str(square.digit), (0, 0, 0), font=font)
-            elif square in pencil_marks:
+            elif pencil_marks is not None and square in pencil_marks:
                 for digit in pencil_marks[square]:
                     draw_pencil_mark(row, col, digit)
 
