@@ -52,12 +52,10 @@ def import_image(image_file_name, recognizer):
 
     image_area = gray.size  # this is area of the image
 
-    for i in contours:
-        if cv2.contourArea(i) > image_area / 2:  # if area of box > half of image area, it is possibly the biggest blob
-            peri = cv2.arcLength(i, True)
-            approx = cv2.approxPolyDP(i, 0.02 * peri, True)
-            # cv2.drawContours(img,[approx],0,(0,255,0),2,cv2.CV_AA)
-            break
+    # if area of box > half of image area, it is possibly the biggest blob
+    contours = [cnt for cnt in contours if cv2.contourArea(cnt) > image_area / 2]
+    peri = cv2.arcLength(contours[0], True)
+    approx = cv2.approxPolyDP(contours[0], 0.02 * peri, True)
 
     #################      Now we got sudoku boundaries, Transform it to perfect square ######################
 
