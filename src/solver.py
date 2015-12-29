@@ -160,7 +160,7 @@ class PencilMarks:
                       for square in self.puzzle.missing()}
 
     def single_candidate(self):
-        return (self.puzzle[(r, c)] for (r, c) in self.marks if len(self.marks))
+        return (self.puzzle[(r, c)] for (r, c) in self.marks if len(self.marks[(r, c)]) == 1)
 
 
 
@@ -219,7 +219,6 @@ def show(puzzle, pencil_marks=None, file_name='../result.png'):
         t, l = square_tl(row, col)
         pencil_mark_row = (digit - 1) // 3
         pencil_mark_col = (digit - 1) % 3
-        print(digit, pencil_mark_row, pencil_mark_col)
         l = l + (pencil_mark_col + 1) * pencil_mark_border + pencil_mark_col * pencil_mark_square_size + 3
         t = t + (pencil_mark_row + 1) * pencil_mark_border + pencil_mark_row * pencil_mark_square_size
         draw.text((l, t),str(digit),(100, 100, 100),font=pencil_marks_font)
