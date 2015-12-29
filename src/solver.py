@@ -175,7 +175,7 @@ class PencilMarks:
         return (self.puzzle[(r, c)] for (r, c) in self.marks if len(self.marks[(r, c)]) == 1)
 
 
-def show(puzzle, pencil_marks=None, file_name='../result.png'):
+def show(puzzle, pencil_marks=None, filename='../result.png', display=True):
     margin = 10
     border = 2
     pencil_mark_border = 2
@@ -234,8 +234,9 @@ def show(puzzle, pencil_marks=None, file_name='../result.png'):
 
     draw_grid()
     draw_digits()
-    img.save(file_name)
-    img.show()
+    img.save(filename)
+    if display:
+        img.show()
 
 
 def iteration_runner(f):
