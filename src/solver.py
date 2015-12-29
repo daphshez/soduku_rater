@@ -177,7 +177,7 @@ class PencilMarks:
 
 
 def set_digit(puzzle, square, digit):
-    print('setting digit %d at location (%d, %d)' % (digit, square.row, square.col))
+    #print('setting digit %d at location (%d, %d)' % (digit, square.row, square.col))
     square.digit = digit
     if not puzzle.is_consistent():
         show(puzzle)
