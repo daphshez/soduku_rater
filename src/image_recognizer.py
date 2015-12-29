@@ -37,7 +37,7 @@ class TTFRecognizer:
             ImageDraw.Draw(pil_im).text((0, 0), str(n), font=ttfont)
             pil_im = pil_im.crop(pil_im.getbbox())
             pil_im = ImageOps.invert(pil_im)
-            # pil_im.save(str(n) + ".png")
+            pil_im.save(str(n) + ".png")
 
             # convert to cv image
             cv_image = cv2.cvtColor(np.array(pil_im), cv2.COLOR_RGBA2BGRA)
@@ -124,17 +124,16 @@ def import_image(image_file_name, recognizer):
 
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if 100 < area < 800:
-
+        if 50 < area < 800:
             (bx, by, bw, bh) = cv2.boundingRect(cnt)
-            if (100 < bw * bh < 1200) and (10 < bw < 50) and (10 < bh < 50):
+            if (100 < bw * bh < 1200) and (5 < bw < 50) and (5 < bh < 50):
+                print(bx, by, bw, bh)
                 roi = dilate[by:by + bh, bx:bx + bw]
                 digit = recognizer.recognize(roi)
 
                 # gridx and gridy are indices of row and column in sudo
                 gridy, gridx = (bx + bw / 2) / 50, (by + bh / 2) / 50
                 sudo.itemset((gridx, gridy), digit)
-    # return sudo.flatten()
     return sudo
 
 
