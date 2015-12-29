@@ -1,6 +1,8 @@
 from itertools import product
 from PIL import Image, ImageFont, ImageDraw
 
+digits = set(range(1, 10))
+
 
 def empty(it):
     return next(it, None) is None
@@ -22,6 +24,10 @@ class Square:
         self.digit = digit
         self.given = digit is not None
 
+    @property
+    def box(self):
+        return find_box(self.row, self.col)
+
     def solved(self):
         return self.digit is not None
 
@@ -30,8 +36,9 @@ class Square:
 
 
 class Unit:
-    def __init__(self):
+    def __init__(self, id):
         self.squares = [None] * 9
+        self.id = id
 
     def __getitem__(self, key):
         return self.squares[key]
@@ -58,9 +65,9 @@ class Unit:
 
 class Puzzle:
     def __init__(self):
-        self.units = {'box': [Unit() for _ in range(9)],
-                      'col': [Unit() for _ in range(9)],
-                      'row': [Unit() for _ in range(9)]}
+        self.units = {'box': [Unit(id) for id in range(9)],
+                      'col': [Unit(id) for id in range(9)],
+                      'row': [Unit(id) for id in range(9)]}
 
     def __getitem__(self, key):
         """
@@ -142,8 +149,6 @@ class Puzzle:
 
 
 class PencilMarks:
-    digits = set(range(1, 10))
-
     def __init__(self, puzzle):
         self.puzzle = puzzle
         self.marks = {}
@@ -156,13 +161,11 @@ class PencilMarks:
         return (square.row, square.col) in self.marks
 
     def update(self):
-        self.marks = {(square.row, square.col): PencilMarks.digits.difference(self.puzzle.peer_values(square))
+        self.marks = {(square.row, square.col): digits.difference(self.puzzle.peer_values(square))
                       for square in self.puzzle.missing()}
 
     def single_candidate(self):
         return (self.puzzle[(r, c)] for (r, c) in self.marks if len(self.marks[(r, c)]) == 1)
-
-
 
 
 def show(puzzle, pencil_marks=None, file_name='../result.png'):
@@ -182,20 +185,19 @@ def show(puzzle, pencil_marks=None, file_name='../result.png'):
     given_font = ImageFont.truetype("../fonts/SourceCodePro-Bold.ttf", 24)
 
     def square_tl(row, col):
-        t = margin + (col + 1) * border + col * square_size
-        l = margin + (row + 1) * border + row * square_size
+        l = margin + (col + 1) * border + col * square_size
+        t = margin + (row + 1) * border + row * square_size
         return t, l
 
     def draw_grid():
         # draw major grid
-        draw.rectangle([(margin, margin), (size-margin, size-margin)], outline='black', fill='black')
+        draw.rectangle([(margin, margin), (size - margin, size - margin)], outline='black', fill='black')
         for i, j in product(range(3), range(3)):
             t = margin + (i + 1) * border + i * box_size
             l = margin + (j + 1) * border + j * box_size
             draw.rectangle([(t, l), (t + box_size - 1, l + box_size - 1)], fill=gray)
 
         # draw minor grid
-        #draw.rectangle([(margin, margin), (size-margin, size-margin)], outline=gray, fill=gray)
         for row, col in product(range(9), range(9)):
             t, l = square_tl(row, col)
             draw.rectangle([(t, l), (t + square_size - 1, l + square_size - 1)], fill='white')
@@ -205,12 +207,12 @@ def show(puzzle, pencil_marks=None, file_name='../result.png'):
             square = puzzle[(row, col)]
             if square.solved():
                 font = given_font if square.given else solved_font
-                w, h = 15, 12     # these are measurement from the results, font.getsize() not helpful
+                w, h = 15, 12  # these are measurement from the results, font.getsize() not helpful
                 t_offset, l_offset = 10, 2
                 t, l = square_tl(row, col)
                 t = t + square_size // 2 - h // 2 - t_offset
                 l = l + square_size // 2 - w // 2 - l_offset
-                draw.text((l, t),str(square.digit),(0,0,0),font=font)
+                draw.text((l, t), str(square.digit), (0, 0, 0), font=font)
             elif square in pencil_marks:
                 for digit in pencil_marks[square]:
                     draw_pencil_mark(row, col, digit)
@@ -221,13 +223,12 @@ def show(puzzle, pencil_marks=None, file_name='../result.png'):
         pencil_mark_col = (digit - 1) % 3
         l = l + (pencil_mark_col + 1) * pencil_mark_border + pencil_mark_col * pencil_mark_square_size + 3
         t = t + (pencil_mark_row + 1) * pencil_mark_border + pencil_mark_row * pencil_mark_square_size
-        draw.text((l, t),str(digit),(100, 100, 100),font=pencil_marks_font)
+        draw.text((l, t), str(digit), (100, 100, 100), font=pencil_marks_font)
 
     draw_grid()
     draw_digits()
     img.save(file_name)
     img.show()
-
 
 
 def iteration_runner(f):
@@ -325,6 +326,7 @@ def single_candidate_by_pencil_marks(puzzle, pencil_marks):
     :param pencil_marks: PencilMarks
     :rtype: [int]
     """
+
     def iteration():
         to_assign = list(pencil_marks.single_candidate())
         for i, square in enumerate(to_assign):
@@ -333,3 +335,5 @@ def single_candidate_by_pencil_marks(puzzle, pencil_marks):
         return len(to_assign)
 
     return iteration_runner(iteration)
+
+
