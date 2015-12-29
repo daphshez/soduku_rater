@@ -26,7 +26,7 @@ class Square:
 
     @property
     def box(self):
-        return find_box(self.row, self.col)
+        return find_box(self.row, self.col)[0]
 
     def solved(self):
         return self.digit is not None
@@ -176,8 +176,16 @@ class PencilMarks:
         return (self.puzzle[(r, c)] for (r, c) in self.marks if len(self.marks[(r, c)]) == 1)
 
 
-def show(puzzle, pencil_marks=None, filename='../result.png', display=True):
-    margin = 10
+def set_digit(puzzle, square, digit):
+    print('setting digit %d at location (%d, %d)' % (digit, square.row, square.col))
+    square.digit = digit
+    if not puzzle.is_consistent():
+        show(puzzle)
+        raise ValueError("Puzzle isn't consistent!")
+
+
+def show(puzzle, pencil_marks=None, filename=None, display=True, caption=None):
+    margin = 30
     border = 2
     pencil_mark_border = 2
     pencil_mark_square_size = 12
@@ -235,7 +243,11 @@ def show(puzzle, pencil_marks=None, filename='../result.png', display=True):
 
     draw_grid()
     draw_digits()
-    img.save(filename)
+    if caption is not None:
+        draw.text((5, 5), caption, fill='black', font=given_font)
+    if filename is not None:
+        img.save(filename)
+
     if display:
         img.show()
 
@@ -269,7 +281,7 @@ def single_position_box(puzzle):
         squares = [square for square in box.missing() if digit not in puzzle.unit('row', square.row)
                    and digit not in puzzle.unit('col', square.col)]
         if len(squares) == 1:
-            squares[0].digit = digit
+            set_digit(puzzle, squares[0], digit)
             return 1
         return 0
 
@@ -297,7 +309,7 @@ def single_candidate(puzzle):
         for square in puzzle.missing():
             peer_digit_set = set(peer.digit for peer in puzzle.peers(square) if peer.digit is not None)
             if len(peer_digit_set) == 8:
-                square.digit = superset.difference(peer_digit_set).pop()
+                set_digit(puzzle, square, superset.difference(peer_digit_set).pop())
                 assignments += 1
         return assignments
 
@@ -313,7 +325,7 @@ def single_position_by_color(puzzle):
             non_colored_empty_squares = empty_squares.difference(colored_out)
             if len(non_colored_empty_squares) == 1:
                 square = non_colored_empty_squares.pop()
-                square.digit = digit
+                set_digit(puzzle, square, digit)
                 return 1
             return 0
 
@@ -339,39 +351,35 @@ def single_candidate_by_pencil_marks(puzzle, pencil_marks):
     def iteration():
         to_assign = list(pencil_marks.single_candidate())
         for i, square in enumerate(to_assign):
-            square.digit = pencil_marks[square].pop()
+            set_digit(puzzle, square, pencil_marks[square].pop())
         pencil_marks.update()
         return len(to_assign)
 
     return iteration_runner(iteration)
 
 
+def candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit):
+    """This method is not normally called directly, it is used by candidate_line_simplification"""
+    def remove(unit_type, unit_id):
+        # other squares in unit
+        l = (square for square in puzzle.units[unit_type][unit_id] if square.box != box.id)
+        # remove those that are solved
+        l = (square for square in l if not square.solved())
+        # remove the ones that don't have the digit in their pencil marks
+        l = (square for square in l if digit in pencil_marks[square])
+        # remove the digit from the pencil marks
+        l = [pencil_marks[square].remove(digit) for square in l]
+        #print("Removing %d from %d squares in %s %d" % (digit, len(l), unit_type, unit_id))
+        return len(l)
+
+    positions = set(square for square in box.missing() if digit in pencil_marks[square])
+    rows = set(square.row for square in positions)
+    r_count = remove('row', rows.pop()) if len(rows) == 1 else 0
+    cols = set(square.col for square in positions)
+    c_count = remove('col', cols.pop()) if len(cols) == 1 else 0
+    return r_count + c_count
+
+
 def candidate_line_simplification(puzzle, pencil_marks):
-    def candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit):
-        """This method is not normally called directly, it is used by candidate_line_simplification"""
-        def by_row():
-            rows = set(square.row for square in positions)
-            if len(rows) == 1:
-                shared_row = rows.pop()
-                return [square for square in puzzle.units['row'][shared_row]
-                        if not square.solved() and square not in positions and digit in pencil_marks[square]]
-            return []
-
-        def by_col():
-            cols = set(square.col for square in positions)
-            if len(cols) == 1:
-                shared_col = cols.pop()
-                return [square for square in puzzle.units['row'][shared_col]
-                        if not square.solved() and square not in positions and digit in pencil_marks[square]]
-            return []
-
-        positions = set(square for square in box.missing() if digit in pencil_marks[square])
-        to_remove = by_row() + by_col()
-        for square in to_remove:
-            pencil_marks[square].remove(digit)
-        return len(to_remove)
-
     return sum(candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit)
                for box in puzzle.units['box'] for digit in digits)
-
-
