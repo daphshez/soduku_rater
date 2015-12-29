@@ -139,6 +139,7 @@ class Puzzle:
     def from_matrix(cls, m):
         def str_digit(d):
             return str(d) if d != 0 else '.'
+
         lines = (''.join(str_digit(d)) for line in m for d in line)
         return cls.from_string('\n'.join(lines))
 
@@ -343,5 +344,34 @@ def single_candidate_by_pencil_marks(puzzle, pencil_marks):
         return len(to_assign)
 
     return iteration_runner(iteration)
+
+
+def candidate_line_simplification(puzzle, pencil_marks):
+    def candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit):
+        """This method is not normally called directly, it is used by candidate_line_simplification"""
+        def by_row():
+            rows = set(square.row for square in positions)
+            if len(rows) == 1:
+                shared_row = rows.pop()
+                return [square for square in puzzle.units['row'][shared_row]
+                        if not square.solved() and square not in positions and digit in pencil_marks[square]]
+            return []
+
+        def by_col():
+            cols = set(square.col for square in positions)
+            if len(cols) == 1:
+                shared_col = cols.pop()
+                return [square for square in puzzle.units['row'][shared_col]
+                        if not square.solved() and square not in positions and digit in pencil_marks[square]]
+            return []
+
+        positions = set(square for square in box.missing() if digit in pencil_marks[square])
+        to_remove = by_row() + by_col()
+        for square in to_remove:
+            pencil_marks[square].remove(digit)
+        return len(to_remove)
+
+    return sum(candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit)
+               for box in puzzle.units['box'] for digit in digits)
 
 
