@@ -185,11 +185,29 @@ class TestPencilMark(unittest.TestCase):
         self.assertEqual(marks[puzzle[(0, 0)]], {8})
 
 
-if __name__ == '__main__':
-    print("== fiendish_7862 ==")
+def solving_fiendish_7862():
     puzzle = Puzzle.from_string(fiendish_7862)
-    # print("single position by color", single_position_by_color(puzzle))
+
+    print("Running single position by color")
+    print(single_position_by_color(puzzle), puzzle.solved())
+
     pencil_marks = PencilMarks(puzzle)
-    # print(candidate_line(puzzle, pencil_marks))
-    show(puzzle, None, '../fiendish_no_marks.png')
-    show(puzzle, pencil_marks)
+    print("running now, single candidate by pencil marks")
+    print(single_candidate_by_pencil_marks(puzzle, pencil_marks), puzzle.solved())
+
+    print("Running single position by color")
+    print(single_position_by_color(puzzle), puzzle.solved())
+
+
+    print("Running candidate line pencil mark simplification")
+    print(candidate_line_simplification(puzzle, pencil_marks))
+
+    print("Running single candidate by pencil marks, again")
+    print(single_candidate_by_pencil_marks(puzzle, pencil_marks))
+
+    print('single position by color, again', single_position_by_color(puzzle))
+    print('is solved?', puzzle.solved())
+    show(puzzle)
+
+if __name__ == '__main__':
+    solving_fiendish_7862()
