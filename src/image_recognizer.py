@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 import solver
 import unittest
+from PIL import Image, ImageFont, ImageDraw, ImageOps
 
 
 class AbidrahmankRecognizer:
@@ -18,9 +19,50 @@ class AbidrahmankRecognizer:
         self.model = cv2.ml.KNearest_create()
         self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
 
-    def recognize(self, feature):
+    def recognize(self, roi):
+        small_roi = cv2.resize(roi, (10, 10))
+        feature = small_roi.reshape((1, 100)).astype(np.float32)
         ret, results, neigh, dist = self.model.findNearest(feature, k=1)
         return int(results.ravel()[0])
+
+
+class TTFRecognizer:
+    def __init__(self, fontfile, digitheight):
+        self.digitheight = digitheight
+        ttfont = ImageFont.truetype(fontfile, digitheight)
+        samples = np.empty((0, digitheight * (digitheight // 2)))
+        responses = []
+        for n in range(10):
+            pil_im = Image.new("RGB", (digitheight, digitheight * 2))
+            ImageDraw.Draw(pil_im).text((0, 0), str(n), font=ttfont)
+            pil_im = pil_im.crop(pil_im.getbbox())
+            pil_im = ImageOps.invert(pil_im)
+            # pil_im.save(str(n) + ".png")
+
+            # convert to cv image
+            cv_image = cv2.cvtColor(np.array(pil_im), cv2.COLOR_RGBA2BGRA)
+            gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+            blur = cv2.GaussianBlur(gray, (5, 5), 0)
+            thresh = cv2.adaptiveThreshold(blur, 255, 1, 1, 11, 2)
+
+            roi = cv2.resize(thresh, (digitheight, digitheight // 2))
+            responses.append(n)
+            sample = roi.reshape((1, digitheight * (digitheight // 2)))
+            samples = np.append(samples, sample, 0)
+
+        samples = np.array(samples, np.float32)
+        responses = np.array(responses, np.float32)
+
+        self.model = cv2.ml.KNearest_create()
+        self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
+
+    def recognize(self, roi):
+        roi = cv2.resize(roi, (self.digitheight, self.digitheight // 2))
+        roi = roi.reshape((1, self.digitheight * (self.digitheight // 2)))
+        roi = np.float32(roi)
+        retval, results, neigh_resp, dists = self.model.findNearest(roi, k=1)
+        return int(results.ravel()[0])
+
 
 def import_image(image_file_name, recognizer):
     #############  Function to put vertices in clockwise order ######################
@@ -87,13 +129,11 @@ def import_image(image_file_name, recognizer):
             (bx, by, bw, bh) = cv2.boundingRect(cnt)
             if (100 < bw * bh < 1200) and (10 < bw < 50) and (10 < bh < 50):
                 roi = dilate[by:by + bh, bx:bx + bw]
-                small_roi = cv2.resize(roi, (10, 10))
-                feature = small_roi.reshape((1, 100)).astype(np.float32)
-                integer = recognizer.recognize(feature)
+                digit = recognizer.recognize(roi)
 
                 # gridx and gridy are indices of row and column in sudo
                 gridy, gridx = (bx + bw / 2) / 50, (by + bh / 2) / 50
-                sudo.itemset((gridx, gridy), integer)
+                sudo.itemset((gridx, gridy), digit)
     # return sudo.flatten()
     return sudo
 
@@ -123,12 +163,10 @@ class ImportTester(unittest.TestCase):
     #     actual = solver.Puzzle.from_matrix(import_image('../abidrahmank/sudokubig.jpg', AbidrahmankRecognizer()))
     #     self.assertEqual(str(expected), str(actual))
 
-
-
     def test_one_line_all_digits(self):
         filename = '../tmp/ImageImporterTest.png'
         s = '123456789' + ('.' * 9 * 7) + '987654321'
         solver.show(solver.Puzzle.from_string(s), pencil_marks=None, filename=filename, display=False)
-        imported = import_image(filename, AbidrahmankRecognizer())
+        imported = import_image(filename, TTFRecognizer("../fonts/SourceCodePro-Bold.ttf", 24))
         puzzle = solver.Puzzle.from_matrix(imported)
-        self.assertEqual(str(puzzle), s)
+        self.assertEqual(s, str(puzzle))
