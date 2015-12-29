@@ -37,7 +37,7 @@ class TTFRecognizer:
             ImageDraw.Draw(pil_im).text((0, 0), str(n), font=ttfont)
             pil_im = pil_im.crop(pil_im.getbbox())
             pil_im = ImageOps.invert(pil_im)
-            pil_im.save(str(n) + ".png")
+            #pil_im.save(str(n) + ".png")
 
             # convert to cv image
             cv_image = cv2.cvtColor(np.array(pil_im), cv2.COLOR_RGBA2BGRA)
@@ -127,7 +127,6 @@ def import_image(image_file_name, recognizer):
         if 50 < area < 800:
             (bx, by, bw, bh) = cv2.boundingRect(cnt)
             if (100 < bw * bh < 1200) and (5 < bw < 50) and (5 < bh < 50):
-                print(bx, by, bw, bh)
                 roi = dilate[by:by + bh, bx:bx + bw]
                 digit = recognizer.recognize(roi)
 
