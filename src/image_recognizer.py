@@ -11,17 +11,18 @@ import solver
 import unittest
 
 
-def train_ocr():
-    ##############  Load OCR data for training #######################################
-    samples = np.float32(np.loadtxt('../abidrahmank/feature_vector_pixels.data'))
-    responses = np.float32(np.loadtxt('../abidrahmank/samples_pixels.data'))
+class AbidrahmankRecognizer:
+    def __init__(self):
+        samples = np.float32(np.loadtxt('../abidrahmank/feature_vector_pixels.data'))
+        responses = np.float32(np.loadtxt('../abidrahmank/samples_pixels.data'))
+        self.model = cv2.ml.KNearest_create()
+        self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
 
-    model = cv2.ml.KNearest_create()
-    model.train(samples, cv2.ml.ROW_SAMPLE, responses)
-    return model
+    def recognize(self, feature):
+        ret, results, neigh, dist = self.model.findNearest(feature, k=1)
+        return int(results.ravel()[0])
 
-
-def import_image(image_file_name, model):
+def import_image(image_file_name, recognizer):
     #############  Function to put vertices in clockwise order ######################
     def rectify(h):
         ''' this function put vertices of square we got, in clockwise order '''
@@ -60,8 +61,8 @@ def import_image(image_file_name, model):
 
     #################      Now we got sudoku boundaries, Transform it to perfect square ######################
 
-    h = np.array([[0, 0], [449, 0], [449, 449], [0, 449]],
-                 np.float32)  # this is corners of new square image taken in CW order
+    # this is corners of new square image taken in CW order
+    h = np.array([[0, 0], [449, 0], [449, 449], [0, 449]], np.float32)
 
     approx = rectify(approx)  # we put the corners of biggest square in CW order to match with h
 
@@ -90,11 +91,10 @@ def import_image(image_file_name, model):
                 roi = dilate[by:by + bh, bx:bx + bw]
                 small_roi = cv2.resize(roi, (10, 10))
                 feature = small_roi.reshape((1, 100)).astype(np.float32)
-                ret, results, neigh, dist = model.findNearest(feature, k=1)
-                integer = int(results.ravel()[0])
+                integer = recognizer.recognize(feature)
 
-                gridy, gridx = (bx + bw / 2) / 50, (
-                    by + bh / 2) / 50  # gridx and gridy are indices of row and column in sudo
+                # gridx and gridy are indices of row and column in sudo
+                gridy, gridx = (bx + bw / 2) / 50, (by + bh / 2) / 50
                 sudo.itemset((gridx, gridy), integer)
     # return sudo.flatten()
     return sudo
@@ -122,15 +122,15 @@ class ImportTester(unittest.TestCase):
     #     . . 2 | 3 . 1 | . . ."""
     #
     #     expected = solver.Puzzle.from_string(s)
-    #     actual = solver.Puzzle.from_matrix(import_image('../abidrahmank/sudokubig.jpg', train_ocr()))
+    #     actual = solver.Puzzle.from_matrix(import_image('../abidrahmank/sudokubig.jpg', AbidrahmankRecognizer()))
     #     self.assertEqual(str(expected), str(actual))
 
 
 
     def test_one_line_all_digits(self):
         filename = '../tmp/ImageImporterTest.png'
-        s = '123456789' + ('.' * 8 * 9)
+        s = '123456789' + ('.' * 9 * 7) + '987654321'
         solver.show(solver.Puzzle.from_string(s), pencil_marks=None, filename=filename, display=False)
-        imported = import_image(filename, train_ocr())
+        imported = import_image(filename, AbidrahmankRecognizer())
         puzzle = solver.Puzzle.from_matrix(imported)
         self.assertEqual(str(puzzle), s)
