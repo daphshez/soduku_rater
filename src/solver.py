@@ -36,7 +36,7 @@ class Square:
 
 
 class Unit:
-    def __init__(self, id):
+    def __init__(self, id=0):
         self.squares = [None] * 9
         self.id = id
 
@@ -134,6 +134,13 @@ class Puzzle:
             row, col = find_row_col(i)
             puzzle[(row, col)] = Square(row, col, v)
         return puzzle
+
+    @classmethod
+    def from_matrix(cls, m):
+        def str_digit(d):
+            return str(d) if d != 0 else '.'
+        lines = (''.join(str_digit(d)) for line in m for d in line)
+        return cls.from_string('\n'.join(lines))
 
     def __str__(self):
         return ''.join(str(row) for row in self.units['row'])

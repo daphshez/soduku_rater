@@ -135,6 +135,19 @@ class TestDataStructures(unittest.TestCase):
         non_consistent = '1' + easy1_solution.strip()[1:]
         self.assertFalse(Puzzle.from_string(non_consistent).is_consistent())
 
+    def test_puzzle_from_matrix(self):
+        m = [[1, 2, 3, 4, 5, 6, 7, 8, 9]
+            , [9, 0, 0, 0, 0, 0, 0, 0, 0]
+            , [8, 0, 0, 0, 0, 0, 0, 0, 0]
+            , [0, 0, 0, 0, 0, 0, 0, 0, 0]
+            , [0, 0, 0, 0, 0, 0, 0, 0, 0]
+            , [0, 0, 0, 0, 0, 0, 0, 0, 0]
+            , [0, 0, 0, 0, 0, 0, 0, 0, 0]
+            , [0, 0, 0, 0, 0, 0, 0, 0, 0]
+            , [0, 0, 0, 0, 0, 0, 0, 0, 0]]
+        puzzle = Puzzle.from_matrix(m)
+        self.assertEqual(str(puzzle), '123456789' + '9' + (8 * '.') + '8' + (8 * '.') + (6 * 9 * '.'))
+
 
 class TestOneEmptySquare(unittest.TestCase):
     def runner(self, f):
@@ -163,57 +176,20 @@ class TestOneEmptySquare(unittest.TestCase):
         self.assertTrue(puzzle.solved())
         self.assertEqual(compact(easy1_solution), str(puzzle))
 
+
 class TestPencilMark(unittest.TestCase):
     def test_one_empty_square(self):
         grid = '.' + easy1_solution.strip()[1:]
         puzzle = Puzzle.from_string(grid)
         marks = PencilMarks(puzzle)
-        self.assertEqual(marks[puzzle[(0,0)]], {8})
-
+        self.assertEqual(marks[puzzle[(0, 0)]], {8})
 
 
 if __name__ == '__main__':
-    # single_position_box doesn't make much advance on easy1
-    # single_number solves it, but it takes 11 iterations
-    # running single_position_box first doesn't reduce the number of iterations
-
-    puzzle = Puzzle.from_string(easy1)
-    print("single_position_by_color", "easy1", single_position_by_color(puzzle))
-    print(puzzle.solved())
-
-    # single candidate performance on easy1, by running first: [5, 5, 4, 4, 8, 9, 4, 6, 4, 4, 0]
-    # after single_position_box:                               [4, 4, 3, 3, 7, 6, 3, 6, 4, 4, 0]
-    puzzle = Puzzle.from_string(easy1)
-    print("single_candidate", "easy1", single_candidate(puzzle))
-    print(puzzle.solved())
-
-    puzzle = Puzzle.from_string(easy1)
+    print("== fiendish_7862 ==")
+    puzzle = Puzzle.from_string(fiendish_7862)
+    # print("single position by color", single_position_by_color(puzzle))
     pencil_marks = PencilMarks(puzzle)
-    print("single_candidate_by_pencil_marks", "easy1", single_candidate_by_pencil_marks(puzzle, pencil_marks))
-    print(puzzle.solved())
-
-
-    puzzle = Puzzle.from_string(beginner1)
-    print("single_position_by_color", "beginner1", single_position_by_color(puzzle))   # [36, 3, 0]
-    print(puzzle.solved())
-
-    puzzle = Puzzle.from_string(beginner1)
-    print("single_position_by_color", "beginner1", single_candidate(puzzle))
-    print(puzzle.solved())
-
-    puzzle = Puzzle.from_string(easy1)
-    show(puzzle, PencilMarks(puzzle))
-    # fiendish doesn't lend itself much to either single_position_box or single_number
-    # puzzle = Puzzle.from_string(fiendish_7862)
-    # print(single_position_box(puzzle))
-    # print(puzzle.solved())
-    # print(puzzle.pretty())
-    #
-    # print(single_candidate(puzzle))
-    # print(puzzle.solved())
-    # print(puzzle.pretty())
-    #
-    # print(single_position_box(puzzle))
-    # print(puzzle.solved())
-    # print(puzzle.pretty())
-    #
+    # print(candidate_line(puzzle, pencil_marks))
+    show(puzzle, None, '../fiendish_no_marks.png')
+    show(puzzle, pencil_marks)
