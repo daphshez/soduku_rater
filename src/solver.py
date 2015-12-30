@@ -96,9 +96,9 @@ class Puzzle:
 
     def chutes_boxes(self):
         for band in range(3):
-            yield [self.units['box'][band * 3 + col] for col in range(3)]
+            yield 'band', [self.units['box'][band * 3 + col] for col in range(3)]
         for stack in range(3):
-            yield [self.units['box'][row * 3 + stack] for row in range(3)]
+            yield 'stack', [self.units['box'][row * 3 + stack] for row in range(3)]
 
     def missing(self):
         """Returns generator of all empty squares.
@@ -379,7 +379,7 @@ def candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit):
         #    print("Removing %d from %d squares in %s %d" % (digit, len(l), unit_type, unit_id))
         return len(l)
 
-    positions = set(square for square in box.missing() if digit in pencil_marks[square])
+    positions = (square for square in box.missing() if digit in pencil_marks[square])
     rows = set(square.row for square in positions)
     r_count = remove('row', rows.pop()) if len(rows) == 1 else 0
     cols = set(square.col for square in positions)
@@ -392,7 +392,52 @@ def candidate_line_simplification(puzzle, pencil_marks):
                for box in puzzle.units['box'] for digit in digits)
 
 
-# https://www.sudokuoftheday.com/techniques/double-pairs/
-def double_pair_simplification(puzzle, pencil_marks):
-    pass
+def multiple_line_simplification(puzzle, pencil_marks):
+    def chute_digit_iteration(chute_type, chute, digit):
+        # this simplification only applies for cases where the digit doesn't appear anywhere in the chute
+        digits_in_chute = set(square.digit for square in box for box in chute if square.digit is not None)
+        if digit in digits_in_chute:
+            return 0
+
+        # squares where the digit can go, per box, according to the pencil marks
+        positions_per_box = [(square for square in box.missing() if digit in pencil_marks[square])
+                             for box in chute]
+        # the set of row\col where the digit can go, per box
+        rc_per_box = [set(square.row if chute_type == 'band' else square.col for square in positions)
+                      for positions in positions_per_box]
+        # digit must appear at least in one pencil_marks per box, otherwise there's an error in the pencil marks
+        # assert [len(s) > 0 for s in rc_per_box] == [True, True, True]
+
+        # this will become useful in a moment!
+        boxes_with_set_of_size_3 = [chute[i] for i, s in enumerate(rc_per_box) if len(s) == 3]
+        # keep a mapping from each set to each current index, because we are going to sort in a second
+        set_to_index = {s: i for i, s in enumerate(rc_per_box)}
+        # now sort by size
+        rc_per_box = sorted(rc_per_box, key=len)
+        # the situation we are looking for is 2 identical sets of size 2, and one set of size 3
+        if sorted(len(s) for s in rc_per_box) != [2, 2, 3] or rc_per_box[0] != rc_per_box[1]:
+            return 0
+        # cool! now find what is the row\col to remove the digit from
+        to_remove = rc_per_box[2].difference(rc_per_box[0]).pop()
+        box_to_remove_from = chute[boxes_with_set_of_size_3[0]]
+        # we are going to remove digit from the pencil_marks of the squares in
+        # box_to_remove_from, row\col to_remove
+        square_to_remove = (s for s in box_to_remove_from if not s.solved() and digit in pencil_marks[s])
+        if chute_type == 'band':
+            square_to_remove = (s for s in square_to_remove if s.row == to_remove)
+        else:
+            square_to_remove = (s for s in square_to_remove if s.col == to_remove)
+        square_to_remove = [pencil_marks[square].remove(digit) for square in square_to_remove]
+        return len(square_to_remove)
+
+    return sum(chute_digit_iteration(chute, digit)
+               for chute in puzzle.chutes_boxes() for digit in digits)
+
+
+
+
+
+
+
+
 
