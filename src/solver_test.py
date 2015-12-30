@@ -163,10 +163,9 @@ class TestDataStructures(unittest.TestCase):
 
     def test_chute_boxes(self):
         puzzle = Puzzle.from_string(easy1_solution)
-        chutes = [[box.id for box in chute] for chute in puzzle.chutes_boxes()]
-        print(chutes)
+        chutes = [[box.id for box in chute] for chute_type, chute in puzzle.chutes_boxes()]
         self.assertEqual([[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8]], chutes)
-        top_left_digit = [[box[0].digit for box in chute] for chute in puzzle.chutes_boxes()]
+        top_left_digit = [[box[0].digit for box in chute] for chute_type, chute in puzzle.chutes_boxes()]
         self.assertEqual([[8, 1, 3], [2, 6, 1], [6, 8, 5], [8, 2, 6], [1, 6,8], [3, 1, 5]], top_left_digit)
 
 
@@ -231,18 +230,37 @@ def solving_fiendish_7862():
     print('is solved?', puzzle.solved())
     show(puzzle)
 
-if __name__ == '__main__':
+
+def solving_bbt():
     puzzle = Puzzle.from_string(bbt)
     print("Running single position by color")
     print(single_position_by_color(puzzle), puzzle.solved())
     pencil_marks = PencilMarks(puzzle)
 
-    print("running now, single candidate by pencil marks")
+    print("running single candidate by pencil marks")
     print(single_candidate_by_pencil_marks(puzzle, pencil_marks), puzzle.solved())
 
     print("Running candidate line pencil mark simplification")
     print(candidate_line_simplification(puzzle, pencil_marks))
-    show(puzzle, pencil_marks)
+
+    print("running n_in_n_simplification with n=2")
+    print(n_in_n_simplification(puzzle, pencil_marks, 2))
 
     print("running now, single candidate by pencil marks")
     print(single_candidate_by_pencil_marks(puzzle, pencil_marks), puzzle.solved())
+
+
+if __name__ == '__main__':
+    puzzle = Puzzle.from_string(easy1)
+    pencil_marks = PencilMarks(puzzle)
+
+    print("Running candidate line pencil mark simplification")
+#    print(candidate_line_simplification(puzzle, pencil_marks))
+
+    print("running n_in_n_simplification with n=2")
+    print(n_in_n_simplification(puzzle, pencil_marks, 2))
+    show(puzzle, pencil_marks)
+
+
+    #print("running n_in_n_simplification with n=3")
+    #print(n_in_n_simplification(puzzle, pencil_marks, 3))

@@ -1,4 +1,4 @@
-from itertools import product
+from itertools import product, combinations
 from PIL import Image, ImageFont, ImageDraw
 
 digits = set(range(1, 10))
@@ -34,11 +34,15 @@ class Square:
     def __str__(self):
         return str(self.digit) if self.digit is not None else '.'
 
+    def __repr__(self):
+        return 'Square<%d,%d>' % (self.row, self.col)
+
 
 class Unit:
-    def __init__(self, id=0):
+    def __init__(self, id=0, type=None):
         self.squares = [None] * 9
         self.id = id
+        self.type = type
 
     def __getitem__(self, key):
         return self.squares[key]
@@ -65,9 +69,9 @@ class Unit:
 
 class Puzzle:
     def __init__(self):
-        self.units = {'box': [Unit(id) for id in range(9)],
-                      'col': [Unit(id) for id in range(9)],
-                      'row': [Unit(id) for id in range(9)]}
+        self.units = {'box': [Unit(id, 'box') for id in range(9)],
+                      'col': [Unit(id, 'col') for id in range(9)],
+                      'row': [Unit(id, 'row') for id in range(9)]}
 
     def __getitem__(self, key):
         """
@@ -93,6 +97,14 @@ class Puzzle:
 
     def unit(self, unit_type, unit_number):
         return self.units[unit_type][unit_number]
+
+    def units_iter(self):
+        for box in self.units['box']:
+            yield box
+        for row in self.units['row']:
+            yield row
+        for col in self.units['col']:
+            yield col
 
     def chutes_boxes(self):
         for band in range(3):
@@ -183,7 +195,7 @@ class PencilMarks:
 
 
 def set_digit(puzzle, square, digit):
-    #print('setting digit %d at location (%d, %d)' % (digit, square.row, square.col))
+    # print('setting digit %d at location (%d, %d)' % (digit, square.row, square.col))
     square.digit = digit
     if not puzzle.is_consistent():
         show(puzzle)
@@ -364,8 +376,42 @@ def single_candidate_by_pencil_marks(puzzle, pencil_marks):
     return iteration_runner(iteration)
 
 
+def n_in_n_simplification(puzzle, pencil_marks, n=2):
+    """Implementation of at N in N pencil_mark simplification strategy.
+
+    If there are n squares in a unit, with up to n digit in the union of all their pencil marks,
+    then these digits are pinned to these squares, and can't be removed from all other pencil marks
+    in the unit.
+
+    For a human solver, the size of n if important - 2 in 2 are easy to spot, 3 in 3 are medium,
+     more than that might be tricky.
+
+    :param puzzle: Puzzle
+    :param n: int
+    :return:
+    """
+    def unit_iteration(unit):
+        for positions in combinations(unit.missing(), n):
+            candidates = set(digit for square in positions for digit in pencil_marks[square])
+            if len(candidates) == n:
+                others = [square for square in unit.missing() if not square in positions
+                          and len(pencil_marks[square].intersection(candidates)) > 0]
+                result = [pencil_marks[square].difference_update(candidates) for square in others]
+                if len(result) > 0:
+                    print('N in N: removed %s from pencil_marks for %s %d, squares %s' % (candidates, unit.type, unit.id, others))
+                    return len(result)
+        return 0
+
+    def iteration():
+        return sum (unit_iteration(unit) for unit in puzzle.units_iter())
+
+
+    return iteration_runner(iteration)
+
+
 def candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit):
     """This method is not normally called directly, it is used by candidate_line_simplification"""
+
     def remove(unit_type, unit_id):
         # other squares in unit
         l = (square for square in puzzle.units[unit_type][unit_id] if square.box != box.id)
@@ -375,7 +421,7 @@ def candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit):
         l = (square for square in l if digit in pencil_marks[square])
         # remove the digit from the pencil marks
         l = [pencil_marks[square].remove(digit) for square in l]
-        #if len(l) > 0:
+        # if len(l) > 0:
         #    print("Removing %d from %d squares in %s %d" % (digit, len(l), unit_type, unit_id))
         return len(l)
 
@@ -432,12 +478,3 @@ def multiple_line_simplification(puzzle, pencil_marks):
 
     return sum(chute_digit_iteration(chute, digit)
                for chute in puzzle.chutes_boxes() for digit in digits)
-
-
-
-
-
-
-
-
-
