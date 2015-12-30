@@ -58,6 +58,19 @@ fiendish_7862 = """
         . . .| . 3 6 | . 8 .
         """
 
+bbt = """
+... | 893 | ...
+..2 | ... | ...
+7.3 | .62 | .8.
+---------------
+..1 | 64. | .9.
+..9 | .3. | 8..
+.4. | .89 | 2..
+---------------
+.1. | 42. | 6.9
+... | ... | 4..
+... | 976 | ...
+"""
 
 def compact(grid_string):
     return ''.join(c for c in grid_string if c.isdigit() or c == '.')
@@ -210,4 +223,17 @@ def solving_fiendish_7862():
     show(puzzle)
 
 if __name__ == '__main__':
-    solving_fiendish_7862()
+    puzzle = Puzzle.from_string(bbt)
+    print("Running single position by color")
+    print(single_position_by_color(puzzle), puzzle.solved())
+    pencil_marks = PencilMarks(puzzle)
+
+    print("running now, single candidate by pencil marks")
+    print(single_candidate_by_pencil_marks(puzzle, pencil_marks), puzzle.solved())
+
+    print("Running candidate line pencil mark simplification")
+    print(candidate_line_simplification(puzzle, pencil_marks))
+    show(puzzle, pencil_marks)
+
+    print("running now, single candidate by pencil marks")
+    print(single_candidate_by_pencil_marks(puzzle, pencil_marks), puzzle.solved())
