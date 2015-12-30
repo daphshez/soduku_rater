@@ -161,6 +161,15 @@ class TestDataStructures(unittest.TestCase):
         puzzle = Puzzle.from_matrix(m)
         self.assertEqual(str(puzzle), '123456789' + '9' + (8 * '.') + '8' + (8 * '.') + (6 * 9 * '.'))
 
+    def test_chute_boxes(self):
+        puzzle = Puzzle.from_string(easy1_solution)
+        chutes = [[box.id for box in chute] for chute in puzzle.chutes_boxes()]
+        print(chutes)
+        self.assertEqual([[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8]], chutes)
+        top_left_digit = [[box[0].digit for box in chute] for chute in puzzle.chutes_boxes()]
+        self.assertEqual([[8, 1, 3], [2, 6, 1], [6, 8, 5], [8, 2, 6], [1, 6,8], [3, 1, 5]], top_left_digit)
+
+
 
 class TestOneEmptySquare(unittest.TestCase):
     def runner(self, f):

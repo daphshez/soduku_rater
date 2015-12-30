@@ -94,6 +94,12 @@ class Puzzle:
     def unit(self, unit_type, unit_number):
         return self.units[unit_type][unit_number]
 
+    def chutes_boxes(self):
+        for band in range(3):
+            yield [self.units['box'][band * 3 + col] for col in range(3)]
+        for stack in range(3):
+            yield [self.units['box'][row * 3 + stack] for row in range(3)]
+
     def missing(self):
         """Returns generator of all empty squares.
 
@@ -384,3 +390,9 @@ def candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit):
 def candidate_line_simplification(puzzle, pencil_marks):
     return sum(candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit)
                for box in puzzle.units['box'] for digit in digits)
+
+
+# https://www.sudokuoftheday.com/techniques/double-pairs/
+def double_pair_simplification(puzzle, pencil_marks):
+    pass
+
