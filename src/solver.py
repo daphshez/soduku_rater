@@ -369,7 +369,8 @@ def candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit):
         l = (square for square in l if digit in pencil_marks[square])
         # remove the digit from the pencil marks
         l = [pencil_marks[square].remove(digit) for square in l]
-        #print("Removing %d from %d squares in %s %d" % (digit, len(l), unit_type, unit_id))
+        #if len(l) > 0:
+        #    print("Removing %d from %d squares in %s %d" % (digit, len(l), unit_type, unit_id))
         return len(l)
 
     positions = set(square for square in box.missing() if digit in pencil_marks[square])
