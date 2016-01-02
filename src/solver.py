@@ -8,6 +8,10 @@ def empty(it):
     return next(it, None) is None
 
 
+def remove_nones(it):
+    return (x for x in it if x is not None)
+
+
 def find_box(row, col):
     """Return the box number and square number in box"""
     return (row // 3) * 3 + col // 3, row % 3 * 3 + col % 3
@@ -39,10 +43,10 @@ class Square:
 
 
 class Unit:
-    def __init__(self, id=0, type=None):
+    def __init__(self, unit_id=0, unit_type=None):
         self.squares = [None] * 9
-        self.id = id
-        self.type = type
+        self.id = unit_id
+        self.type = unit_type
 
     def __getitem__(self, key):
         return self.squares[key]
@@ -69,9 +73,9 @@ class Unit:
 
 class Puzzle:
     def __init__(self):
-        self.units = {'box': [Unit(id, 'box') for id in range(9)],
-                      'col': [Unit(id, 'col') for id in range(9)],
-                      'row': [Unit(id, 'row') for id in range(9)]}
+        self.units = {'box': [Unit(unit_id, 'box') for unit_id in range(9)],
+                      'col': [Unit(unit_id, 'col') for unit_id in range(9)],
+                      'row': [Unit(unit_id, 'row') for unit_id in range(9)]}
 
     def __getitem__(self, key):
         """
@@ -131,7 +135,9 @@ class Puzzle:
         raw = self.units['row'][row].squares + self.units['col'][col].squares + self.units['box'][box].squares
         return (s for s in raw if s != square)
 
-    def peer_values(self, square):
+    def peer_values(self, square=None, row=None, col=None):
+        if square is None:
+            square = self.__getitem__((row, col))
         return set(peer.digit for peer in self.peers(square) if peer.digit is not None)
 
     def set_to(self, digit):
@@ -177,8 +183,10 @@ class Puzzle:
 class PencilMarks:
     def __init__(self, puzzle):
         self.puzzle = puzzle
-        self.marks = {}
+        self.marks = {(square.row, square.col): set(digits) for square in self.puzzle.missing()}
         self.update()
+        self.marks = {(square.row, square.col): digits.difference(self.puzzle.peer_values(square))
+                      for square in self.puzzle.missing()}
 
     def __getitem__(self, square):
         return self.marks[(square.row, square.col)]
@@ -187,11 +195,54 @@ class PencilMarks:
         return (square.row, square.col) in self.marks
 
     def update(self):
-        self.marks = {(square.row, square.col): digits.difference(self.puzzle.peer_values(square))
-                      for square in self.puzzle.missing()}
+        def fix_marks(row, col, marks):
+            if self.puzzle[(row, col)].solved():
+                return None
+            else:
+                marks.difference(self.puzzle.peer_values(row=row, col=col))
+        # generator for triplets of row, col and fixed marks for that square
+        fixed_marks = ((row, col, fix_marks(row, col, marks) for (row, col), marks in self.marks.items()))
+        # remove the empty marks
+        fixed_marks = ((row, col, marks) for (row, col, marks) in fixed_marks if marks is not None)
+        # recreate the dictionary
+        self.marks = {(row, col): marks for (row, col, marks) in fixed_marks}
 
     def single_candidate(self):
         return (self.puzzle[(r, c)] for (r, c) in self.marks if len(self.marks[(r, c)]) == 1)
+
+
+class AssignmentMove:
+    def __init__(self, description, squares_and_digits):
+        self.description = description
+        self.squares_and_digits = squares_and_digits
+
+    def describe(self):
+        return self.description
+
+    def squares(self):
+        return [square for square, digit in self.squares_and_digits]
+
+    def execute(self):
+        for square, digit in self.squares_and_digits:
+            square.digit = digit
+
+
+class SimplificationMove:
+    def __init__(self, pencil_marks, description, squares_and_digits_to_remove):
+        self.pencil_marks = pencil_marks
+        self.description = description
+        self.squares_and_digits_to_remove = squares_and_digits_to_remove
+
+    def describe(self):
+        return self.description
+
+    def squares(self):
+        return [square for square, to_remove in self.squares_and_digits_to_remove]
+
+    def execute(self):
+        for square, digits_to_remove in self.squares_and_digits_to_remove:
+            for digit in digits_to_remove:
+                self.pencil_marks[square].remove(digit)
 
 
 def set_digit(puzzle, square, digit):
@@ -270,110 +321,78 @@ def show(puzzle, pencil_marks=None, filename=None, display=True, caption=None):
         img.show()
 
 
-def iteration_runner(f):
-    """Runs the function f indefinitely until it returns 0. Returns the list of value returned by f.
-
-    :type f: function
-    :rtype: list[int]
-    """
-    assignments = []
-    while True:
-        assignments.append(f())
-        if assignments[-1] == 0:
-            break
-    return assignments
-
-
-# Iterate over digits. For each number, iterate over boxes missing the
-# If the box doesn't contain the number, iterate over square and see how many of them could take
-# the number based on col\row sets
-def single_position_box(puzzle):
-    """Check if the rows and columns pin a single position on boxes. Returns number of iterations to convergence.
-
-    :type puzzle: Puzzle
-    :rtype: list[int]
-    """
-
-    def single_position_box_digit(box, digit):
-        """Returns true if a square was assigned"""
-        squares = [square for square in box.missing() if digit not in puzzle.unit('row', square.row)
-                   and digit not in puzzle.unit('col', square.col)]
-        if len(squares) == 1:
-            set_digit(puzzle, squares[0], digit)
-            return 1
-        return 0
-
-    def digit_iteration(digit):
-        """Returns the number of squares assigned"""
-        digit_missing = [box for box in puzzle.units['box'] if digit not in box]
-        return sum(single_position_box_digit(box, digit) for box in digit_missing)
-
-    def iteration():
-        """Returns the number of squares assigned"""
-        return sum(digit_iteration(digit) for digit in range(1, 10))
-
-    return iteration_runner(iteration)
-
 
 def single_candidate(puzzle):
-    """Find squares that are pinned by all their peers to a single number
-
-    :type puzzle: Puzzle
     """
-    superset = set(range(1, 10))
 
-    def iteration():
-        assignments = 0
-        for square in puzzle.missing():
-            peer_digit_set = set(peer.digit for peer in puzzle.peers(square) if peer.digit is not None)
-            if len(peer_digit_set) == 8:
-                set_digit(puzzle, square, superset.difference(peer_digit_set).pop())
-                assignments += 1
-        return assignments
+    :param puzzle: Puzzle
+    :rtype: list[AssignmentMove]
+    """
+    def find_digit(square):
+        peer_digit_set = set(peer.digit for peer in puzzle.peers(square) if peer.digit is not None)
+        return digits.difference(peer_digit_set).pop() if len(peer_digit_set) == 8 else None
 
-    return iteration_runner(iteration)
+    moves = ((square, find_digit(square)) for square in puzzle)
+    # remove moves where the candidate is None, and make into a list
+    moves = list((square, digit) for (square, digit) in moves if digit is not None)
+    if len(moves) > 0:
+        return [AssignmentMove('single_candidate', moves)]
+    return []
 
 
-def single_position_by_color(puzzle):
-    def iteration_for_digit(digit, unit_type):
+def single_position(puzzle):
+    """Find a single position, per unit, where a digit can fit.
+
+    by color: the idea is that you first mentally "color" (or gray out) all the positions that are impossible
+    for the digit, and, for each unit, see if there's only one square that isn't colored.
+    :param puzzle: Puzzle
+    :rtype: list[AssignmentMove]
+    """
+
+    def iteration_for_digit(digit):
         def find_only_position(unit):
             # looks for a single non-colored empty square
             # if found one, set the value to digit and return 1, else return 0
             empty_squares = set(square for square in unit if square.digit is None)
             non_colored_empty_squares = empty_squares.difference(colored_out)
-            if len(non_colored_empty_squares) == 1:
-                square = non_colored_empty_squares.pop()
-                set_digit(puzzle, square, digit)
-                return 1
-            return 0
+            return non_colored_empty_squares[0] if len(non_colored_empty_squares) == 1 else None
 
         colored_out = set(peer for square in puzzle.set_to(digit) for peer in puzzle.peers(square))
-        units_in_need = [unit for unit in puzzle.units[unit_type] if digit not in unit]
-        return sum(find_only_position(unit) for unit in units_in_need)
+        # this would be the single position, or None if there's more than one
+        positions = (find_only_position(unit) for unit in puzzle.units_iter() if digit not in unit)
+        # remove the Nones and make into a list
+        positions = list(remove_nones(positions))
+        if len(positions) > 0:
+            return AssignmentMove('single_position_by_color for %d' % digit, [(square, digit) for square in positions])
 
-    def iteration():
-        return sum(iteration_for_digit(digit, unit_type) for unit_type, digit in
-                   product(('row', 'col', 'box'), range(1, 10)))
-
-    return iteration_runner(iteration)
+    return list(remove_nones(iteration_for_digit(digit) for digit in digits))
 
 
 def single_candidate_by_pencil_marks(puzzle, pencil_marks):
-    """Iteratively uses pencil marks to identify cells that have one candidate
+    to_assign = list(pencil_marks.single_candidate())
+    if len(to_assign) > 0:
+        square_and_digit = [(square, list(pencil_marks[square])[0]) for square in to_assign]
+        return [AssignmentMove('single_candidate_by_pencil_marks', square_and_digit)]
+    return []
 
-    :param puzzle: Puzzle
-    :param pencil_marks: PencilMarks
-    :rtype: [int]
-    """
 
-    def iteration():
-        to_assign = list(pencil_marks.single_candidate())
-        for i, square in enumerate(to_assign):
-            set_digit(puzzle, square, pencil_marks[square].pop())
-        pencil_marks.update()
-        return len(to_assign)
+def single_position_by_pencil_marks(puzzle, pencil_marks):
+    # by color: the idea is that you first mentally "color" (or gray out) all the positions that are impossible
+    # for the digit, and, for each unit, see if there's only one square that isn't colored
+    def iteration_for_digit(digit):
+        def find_only_position(unit):
+            square_with_digit_in_pencil_marks = [square for square in unit.missing() if digit in pencil_marks[square]]
+            return square_with_digit_in_pencil_marks[0] if len(square_with_digit_in_pencil_marks) == 1 else None
 
-    return iteration_runner(iteration)
+        # this would be the single position, or None if there's more than one
+        positions = (find_only_position(unit) for unit in puzzle.units_iter() if digit not in unit)
+        # remove the Nones and make into a list
+        positions = list(remove_nones(positions))
+        if len(positions) > 0:
+            return AssignmentMove('single_position_by_pencil_marks for %d' % digit,
+                                  [(square, digit) for square in positions])
+
+    return list(remove_nones(iteration_for_digit(digit) for digit in digits))
 
 
 def n_in_n_simplification(puzzle, pencil_marks, n=2):
@@ -391,90 +410,59 @@ def n_in_n_simplification(puzzle, pencil_marks, n=2):
     :return:
     """
     def unit_iteration(unit):
+        """
+
+        :param unit: Unit
+        :return:
+        """
+        # iterate over pairs, triplets etc. of squares in the units
         for positions in combinations(unit.missing(), n):
+            # find the set of all candidates for these squares
             candidates = set(digit for square in positions for digit in pencil_marks[square])
+            # if the number is exactly n, these candidates can be removed from pencil
+            # marks of all other squares in the unit
             if len(candidates) == n:
-                others = [square for square in unit.missing() if not square in positions
+                others = [square for square in unit.missing() if square not in positions
                           and len(pencil_marks[square].intersection(candidates)) > 0]
-                result = [pencil_marks[square].difference_update(candidates) for square in others]
-                if len(result) > 0:
-                    print('N in N: removed %s from pencil_marks for %s %d, squares %s' % (candidates, unit.type, unit.id, others))
-                    return len(result)
-        return 0
+                if len(others) > 0:
+                    message = '%s are pinned to %d squares in %s %d. They can be removed from %d other squares' \
+                              % (str(candidates), n, unit.type, unit.id, len(others))
+                    return SimplificationMove(pencil_marks, message, [(square, candidates) for square in others])
 
-    def iteration():
-        return sum (unit_iteration(unit) for unit in puzzle.units_iter())
+    return [unit_iteration(unit) for unit in puzzle.units_iter()]
 
 
-    return iteration_runner(iteration)
+def run_assisted_solver(puzzle):
+    def execute_moves(moves):
+        # todo: show before, execute, show after
+        pass
+
+    def exhaust(f, parameters):
+        moves = f(*parameters)
+        any_change = False
+        while len(moves) > 0:
+            execute_moves(moves)
+            any_change = True
+            moves = f()
+        return any_change
+
+    # iterate over single_position and single_candidates until they don't produce moves
+    while exhaust(single_position, [puzzle]) or exhaust(single_position, [puzzle]):
+        pass
+
+    # todo: check if solved!
+
+    # create pencil marks
+    pencil_marks = PencilMarks(puzzle)
+    # because we exhausted single_candidate, single_candidate_by_pencil_marks shouldn't return anything
+    assert empty(single_candidate_by_pencil_marks(puzzle, pencil_marks))
+    assert empty(single_position_by_pencil_marks(puzzle, pencil_marks))
 
 
-def candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit):
-    """This method is not normally called directly, it is used by candidate_line_simplification"""
+    # try 2_in_2 and single_candidate_by_pencil_marks & single_position_by_pencil_marks interchangeably until exhausted
+    while exhaust(n_in_n_simplification, [puzzle, pencil_marks, 2]) or exhaust(single_candidate_by_pencil_marks, [puzzle, pencil_marks]) or     exhaust(single_position_by_pencil_marks, [puzzle, pencil_marks]):
+        pass
 
-    def remove(unit_type, unit_id):
-        # other squares in unit
-        l = (square for square in puzzle.units[unit_type][unit_id] if square.box != box.id)
-        # remove those that are solved
-        l = (square for square in l if not square.solved())
-        # remove the ones that don't have the digit in their pencil marks
-        l = (square for square in l if digit in pencil_marks[square])
-        # remove the digit from the pencil marks
-        l = [pencil_marks[square].remove(digit) for square in l]
-        # if len(l) > 0:
-        #    print("Removing %d from %d squares in %s %d" % (digit, len(l), unit_type, unit_id))
-        return len(l)
-
-    positions = (square for square in box.missing() if digit in pencil_marks[square])
-    rows = set(square.row for square in positions)
-    r_count = remove('row', rows.pop()) if len(rows) == 1 else 0
-    cols = set(square.col for square in positions)
-    c_count = remove('col', cols.pop()) if len(cols) == 1 else 0
-    return r_count + c_count
+    # todo: check if solved!
 
 
-def candidate_line_simplification(puzzle, pencil_marks):
-    return sum(candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit)
-               for box in puzzle.units['box'] for digit in digits)
-
-
-def multiple_line_simplification(puzzle, pencil_marks):
-    def chute_digit_iteration(chute_type, chute, digit):
-        # this simplification only applies for cases where the digit doesn't appear anywhere in the chute
-        digits_in_chute = set(square.digit for square in box for box in chute if square.digit is not None)
-        if digit in digits_in_chute:
-            return 0
-
-        # squares where the digit can go, per box, according to the pencil marks
-        positions_per_box = [(square for square in box.missing() if digit in pencil_marks[square])
-                             for box in chute]
-        # the set of row\col where the digit can go, per box
-        rc_per_box = [set(square.row if chute_type == 'band' else square.col for square in positions)
-                      for positions in positions_per_box]
-        # digit must appear at least in one pencil_marks per box, otherwise there's an error in the pencil marks
-        # assert [len(s) > 0 for s in rc_per_box] == [True, True, True]
-
-        # this will become useful in a moment!
-        boxes_with_set_of_size_3 = [chute[i] for i, s in enumerate(rc_per_box) if len(s) == 3]
-        # keep a mapping from each set to each current index, because we are going to sort in a second
-        set_to_index = {s: i for i, s in enumerate(rc_per_box)}
-        # now sort by size
-        rc_per_box = sorted(rc_per_box, key=len)
-        # the situation we are looking for is 2 identical sets of size 2, and one set of size 3
-        if sorted(len(s) for s in rc_per_box) != [2, 2, 3] or rc_per_box[0] != rc_per_box[1]:
-            return 0
-        # cool! now find what is the row\col to remove the digit from
-        to_remove = rc_per_box[2].difference(rc_per_box[0]).pop()
-        box_to_remove_from = chute[boxes_with_set_of_size_3[0]]
-        # we are going to remove digit from the pencil_marks of the squares in
-        # box_to_remove_from, row\col to_remove
-        square_to_remove = (s for s in box_to_remove_from if not s.solved() and digit in pencil_marks[s])
-        if chute_type == 'band':
-            square_to_remove = (s for s in square_to_remove if s.row == to_remove)
-        else:
-            square_to_remove = (s for s in square_to_remove if s.col == to_remove)
-        square_to_remove = [pencil_marks[square].remove(digit) for square in square_to_remove]
-        return len(square_to_remove)
-
-    return sum(chute_digit_iteration(chute, digit)
-               for chute in puzzle.chutes_boxes() for digit in digits)
