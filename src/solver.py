@@ -199,13 +199,19 @@ class PencilMarks:
             if self.puzzle[(row, col)].solved():
                 return None
             else:
-                marks.difference(self.puzzle.peer_values(row=row, col=col))
+                return marks.difference(self.puzzle.peer_values(row=row, col=col))
+
         # generator for triplets of row, col and fixed marks for that square
-        fixed_marks = ((row, col, fix_marks(row, col, marks) for (row, col), marks in self.marks.items()))
+        fixed_marks = ((row, col, fix_marks(row, col, marks)) for ((row, col), marks) in self.marks.items())
         # remove the empty marks
         fixed_marks = ((row, col, marks) for (row, col, marks) in fixed_marks if marks is not None)
         # recreate the dictionary
-        self.marks = {(row, col): marks for (row, col, marks) in fixed_marks}
+        as_dict = {(row, col): marks for (row, col, marks) in fixed_marks}
+        # keep a set of squares with changed marks, that we will return
+        changed_squares = set(k for k in self.marks if k in as_dict and self.marks[k] != as_dict[k])
+        # save as_dict as the new marks
+        self.marks = as_dict
+        return changed_squares
 
     def single_candidate(self):
         return (self.puzzle[(r, c)] for (r, c) in self.marks if len(self.marks[(r, c)]) == 1)
@@ -241,19 +247,10 @@ class SimplificationMove:
 
     def execute(self):
         for square, digits_to_remove in self.squares_and_digits_to_remove:
-            for digit in digits_to_remove:
-                self.pencil_marks[square].remove(digit)
+            self.pencil_marks[square].difference_update(digits_to_remove)
 
 
-def set_digit(puzzle, square, digit):
-    # print('setting digit %d at location (%d, %d)' % (digit, square.row, square.col))
-    square.digit = digit
-    if not puzzle.is_consistent():
-        show(puzzle)
-        raise ValueError("Puzzle isn't consistent!")
-
-
-def show(puzzle, pencil_marks=None, filename=None, display=True, caption=None):
+def show(puzzle, pencil_marks=None, filename=None, display=True, caption=None, highlight=set()):
     margin = 30
     border = 2
     pencil_mark_border = 2
@@ -261,9 +258,13 @@ def show(puzzle, pencil_marks=None, filename=None, display=True, caption=None):
     square_size = pencil_mark_square_size * 3 + pencil_mark_border * 4
     box_size = 3 * square_size + 2 * border
     size = margin * 2 + border * 10 + square_size * 9
-    gray = (160, 160, 160)
     img = Image.new('RGB', (size, size), color='white')
     draw = ImageDraw.Draw(img)
+
+    internal_border_color = (160, 160, 160)
+    highlight_square_background = (255, 201, 201)
+    highlight_square_font = (188, 11, 11)
+    pencil_mark_color = (100, 100, 100)
 
     pencil_marks_font = ImageFont.truetype("../fonts/SourceCodePro-Medium.ttf", 10)
     solved_font = ImageFont.truetype("../fonts/SourceCodePro-Medium.ttf", 24)
@@ -280,12 +281,13 @@ def show(puzzle, pencil_marks=None, filename=None, display=True, caption=None):
         for i, j in product(range(3), range(3)):
             t = margin + (i + 1) * border + i * box_size
             l = margin + (j + 1) * border + j * box_size
-            draw.rectangle([(t, l), (t + box_size - 1, l + box_size - 1)], fill=gray)
+            draw.rectangle([(t, l), (t + box_size - 1, l + box_size - 1)], fill=internal_border_color)
 
         # draw minor grid
         for row, col in product(range(9), range(9)):
             t, l = square_tl(row, col)
-            draw.rectangle([(t, l), (t + square_size - 1, l + square_size - 1)], fill='white')
+            fill = highlight_square_background if (col, row) in highlight else 'white'
+            draw.rectangle([(t, l), (t + square_size - 1, l + square_size - 1)], fill=fill)
 
     def draw_digits():
         for row, col in product(range(9), range(9)):
@@ -297,7 +299,8 @@ def show(puzzle, pencil_marks=None, filename=None, display=True, caption=None):
                 t, l = square_tl(row, col)
                 t = t + square_size // 2 - h // 2 - t_offset
                 l = l + square_size // 2 - w // 2 - l_offset
-                draw.text((l, t), str(square.digit), (0, 0, 0), font=font)
+                font_color = highlight_square_font if (row, col) in highlight else 'black'
+                draw.text((l, t), str(square.digit), font_color, font=font)
             elif pencil_marks is not None and square in pencil_marks:
                 for digit in pencil_marks[square]:
                     draw_pencil_mark(row, col, digit)
@@ -308,7 +311,8 @@ def show(puzzle, pencil_marks=None, filename=None, display=True, caption=None):
         pencil_mark_col = (digit - 1) % 3
         l = l + (pencil_mark_col + 1) * pencil_mark_border + pencil_mark_col * pencil_mark_square_size + 3
         t = t + (pencil_mark_row + 1) * pencil_mark_border + pencil_mark_row * pencil_mark_square_size
-        draw.text((l, t), str(digit), (100, 100, 100), font=pencil_marks_font)
+        font_color = highlight_square_font if (row, col) in highlight else pencil_mark_color
+        draw.text((l, t), str(digit), font_color, font=pencil_marks_font)
 
     draw_grid()
     draw_digits()
@@ -321,23 +325,17 @@ def show(puzzle, pencil_marks=None, filename=None, display=True, caption=None):
         img.show()
 
 
-
 def single_candidate(puzzle):
-    """
-
-    :param puzzle: Puzzle
-    :rtype: list[AssignmentMove]
-    """
     def find_digit(square):
         peer_digit_set = set(peer.digit for peer in puzzle.peers(square) if peer.digit is not None)
         return digits.difference(peer_digit_set).pop() if len(peer_digit_set) == 8 else None
 
-    moves = ((square, find_digit(square)) for square in puzzle)
-    # remove moves where the candidate is None, and make into a list
-    moves = list((square, digit) for (square, digit) in moves if digit is not None)
-    if len(moves) > 0:
-        return [AssignmentMove('single_candidate', moves)]
-    return []
+    unsolved_boxes = (box for box in puzzle.units['box'] if not box.solved())
+    for box in unsolved_boxes:
+        moves = ((square, find_digit(square)) for square in box.missing())
+        moves = [(square, digit) for (square, digit) in moves if digit is not None]
+        if len(moves) > 0:
+            return AssignmentMove('Single candidate(s) for box %s' % box.id, moves)
 
 
 def single_position(puzzle):
@@ -346,53 +344,39 @@ def single_position(puzzle):
     by color: the idea is that you first mentally "color" (or gray out) all the positions that are impossible
     for the digit, and, for each unit, see if there's only one square that isn't colored.
     :param puzzle: Puzzle
-    :rtype: list[AssignmentMove]
+    :rtype: AssignmentMove
     """
-
-    def iteration_for_digit(digit):
-        def find_only_position(unit):
-            # looks for a single non-colored empty square
-            # if found one, set the value to digit and return 1, else return 0
-            empty_squares = set(square for square in unit if square.digit is None)
-            non_colored_empty_squares = empty_squares.difference(colored_out)
-            return non_colored_empty_squares[0] if len(non_colored_empty_squares) == 1 else None
-
+    for digit in digits:
+        squares = []
         colored_out = set(peer for square in puzzle.set_to(digit) for peer in puzzle.peers(square))
-        # this would be the single position, or None if there's more than one
-        positions = (find_only_position(unit) for unit in puzzle.units_iter() if digit not in unit)
-        # remove the Nones and make into a list
-        positions = list(remove_nones(positions))
-        if len(positions) > 0:
-            return AssignmentMove('single_position_by_color for %d' % digit, [(square, digit) for square in positions])
+        for unit in puzzle.units_iter():
+            empty_squares = set(square for square in unit if square.digit is None)
+            positions_in_unit = empty_squares.difference(colored_out)
+            if len(positions_in_unit) == 1:
+                squares.append(positions_in_unit.pop())
 
-    return list(remove_nones(iteration_for_digit(digit) for digit in digits))
+            if len(squares) > 0:
+                return AssignmentMove('%d has a single position in %s %d' % (digit, unit.type, unit.id + 1),
+                                      [(square, digit) for square in squares])
 
 
 def single_candidate_by_pencil_marks(puzzle, pencil_marks):
     to_assign = list(pencil_marks.single_candidate())
     if len(to_assign) > 0:
         square_and_digit = [(square, list(pencil_marks[square])[0]) for square in to_assign]
-        return [AssignmentMove('single_candidate_by_pencil_marks', square_and_digit)]
-    return []
+        return AssignmentMove('Single pencil mark', square_and_digit)
 
 
 def single_position_by_pencil_marks(puzzle, pencil_marks):
-    # by color: the idea is that you first mentally "color" (or gray out) all the positions that are impossible
-    # for the digit, and, for each unit, see if there's only one square that isn't colored
-    def iteration_for_digit(digit):
-        def find_only_position(unit):
-            square_with_digit_in_pencil_marks = [square for square in unit.missing() if digit in pencil_marks[square]]
-            return square_with_digit_in_pencil_marks[0] if len(square_with_digit_in_pencil_marks) == 1 else None
-
-        # this would be the single position, or None if there's more than one
-        positions = (find_only_position(unit) for unit in puzzle.units_iter() if digit not in unit)
-        # remove the Nones and make into a list
-        positions = list(remove_nones(positions))
-        if len(positions) > 0:
-            return AssignmentMove('single_position_by_pencil_marks for %d' % digit,
-                                  [(square, digit) for square in positions])
-
-    return list(remove_nones(iteration_for_digit(digit) for digit in digits))
+    for digit in digits:
+        squares = []
+        for unit in puzzle.units_iter():
+            positions_in_unit = [square for square in unit.missing() if digit in pencil_marks[square]]
+            if len(positions_in_unit) == 1:
+                squares.append(positions_in_unit.pop())
+            if len(squares) > 0:
+                return AssignmentMove('%d has a single position in %s %d' % (digit, unit.type, unit.id + 1),
+                                      [(square, digit) for square in squares])
 
 
 def n_in_n_simplification(puzzle, pencil_marks, n=2):
@@ -409,12 +393,7 @@ def n_in_n_simplification(puzzle, pencil_marks, n=2):
     :param n: int
     :return:
     """
-    def unit_iteration(unit):
-        """
-
-        :param unit: Unit
-        :return:
-        """
+    for unit in puzzle.units_iter():
         # iterate over pairs, triplets etc. of squares in the units
         for positions in combinations(unit.missing(), n):
             # find the set of all candidates for these squares
@@ -429,40 +408,96 @@ def n_in_n_simplification(puzzle, pencil_marks, n=2):
                               % (str(candidates), n, unit.type, unit.id, len(others))
                     return SimplificationMove(pencil_marks, message, [(square, candidates) for square in others])
 
-    return [unit_iteration(unit) for unit in puzzle.units_iter()]
+
+class MoveExecutor:
+    def __init__(self):
+        self.image_counter = 1
+
+    def execute(self, move, puzzle, pencil_marks=None):
+        print('executing move %d: %s' % (self.image_counter, move.describe()))
+        self.show(move, puzzle, pencil_marks)
+        move.execute()
+        self.show(move, puzzle, pencil_marks)
+
+        if pencil_marks is not None:
+            changed_squares = pencil_marks.update()
+            if len(changed_squares) > 0:
+                show(puzzle, pencil_marks=pencil_marks, filename='../tmp/%d.png' % self.image_counter, display=False,
+                     caption='pencil marks updated', highlight=changed_squares)
+                self.image_counter += 1
+
+    def pencil_marks_generated(self, puzzle, pencil_marks):
+        show(puzzle, pencil_marks=pencil_marks, filename='../tmp/%d.png' % self.image_counter, display=False,
+             caption='pencil marks generated', highlight=set(pencil_marks.marks.keys()))
+        self.image_counter += 1
+
+    def show(self, move, puzzle, pencil_marks=None):
+        highlight = set((square.row, square.col) for square in move.squares())
+        show(puzzle, pencil_marks=pencil_marks, filename='../tmp/%d.png' % self.image_counter, display=False,
+             caption=move.describe(), highlight=highlight)
+        self.image_counter += 1
 
 
 def run_assisted_solver(puzzle):
-    def execute_moves(moves):
-        # todo: show before, execute, show after
-        pass
+    executor = MoveExecutor()
 
-    def exhaust(f, parameters):
-        moves = f(*parameters)
-        any_change = False
-        while len(moves) > 0:
-            execute_moves(moves)
-            any_change = True
-            moves = f()
-        return any_change
+    # run single_position and single_candidate to exhaustion
+    any_move = True
+    while any_move:
+        any_move = False
 
-    # iterate over single_position and single_candidates until they don't produce moves
-    while exhaust(single_position, [puzzle]) or exhaust(single_position, [puzzle]):
-        pass
+        move = single_position(puzzle)
+        while move:
+            any_move = True
+            executor.execute(move, puzzle)
+            move = single_position(puzzle)
 
-    # todo: check if solved!
+        move = single_candidate(puzzle)
+        while move:
+            any_move = True
+            executor.execute(move, puzzle)
+            move = single_candidate(puzzle)
+
+    # arriving here means that neither single_position nor single_candidate could produce any more
+    if puzzle.solved():
+        return True
 
     # create pencil marks
     pencil_marks = PencilMarks(puzzle)
-    # because we exhausted single_candidate, single_candidate_by_pencil_marks shouldn't return anything
-    assert empty(single_candidate_by_pencil_marks(puzzle, pencil_marks))
-    assert empty(single_position_by_pencil_marks(puzzle, pencil_marks))
+    executor.pencil_marks_generated(puzzle, pencil_marks)
 
+    # because we exhausted single_candidate, single_candidate_by_pencil_marks shouldn't return anything
+    assert single_candidate_by_pencil_marks(puzzle, pencil_marks) is None
+    assert single_position_by_pencil_marks(puzzle, pencil_marks) is None
 
     # try 2_in_2 and single_candidate_by_pencil_marks & single_position_by_pencil_marks interchangeably until exhausted
-    while exhaust(n_in_n_simplification, [puzzle, pencil_marks, 2]) or exhaust(single_candidate_by_pencil_marks, [puzzle, pencil_marks]) or     exhaust(single_position_by_pencil_marks, [puzzle, pencil_marks]):
-        pass
+    any_move = True
+    while any_move:
+        any_move = False
 
-    # todo: check if solved!
+        move = n_in_n_simplification(puzzle, pencil_marks)
+        if move:
+            any_move = True
+            executor.execute(move, puzzle, pencil_marks)
 
+        # exhaust single candidate by pencil mark (extremely visible to humans)!
+        move = single_candidate_by_pencil_marks(puzzle, pencil_marks)
+        while move:
+            any_move = True
+            executor.execute(move, puzzle, pencil_marks)
+            move = single_candidate_by_pencil_marks(puzzle, pencil_marks)
 
+        move = single_position_by_pencil_marks(puzzle, pencil_marks)
+        while move:
+            any_move = True
+            executor.execute(move, puzzle, pencil_marks)
+            # exhaust single candidate by pencil mark (extremely visible to humans)!
+            move = single_candidate_by_pencil_marks(puzzle, pencil_marks)
+            while move:
+                any_move = True
+                executor.execute(move, puzzle, pencil_marks)
+                move = single_candidate_by_pencil_marks(puzzle, pencil_marks)
+            # exhausted, try single position again
+            move = single_position_by_pencil_marks(puzzle, pencil_marks)
+
+    return puzzle.solved()
