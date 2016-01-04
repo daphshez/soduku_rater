@@ -67,6 +67,9 @@ class Unit:
     def missing(self):
         return [square for square in self.squares if not square.solved()]
 
+    def missing_digits(self):
+        return digits.difference([square.digit for square in self.squares if square.solved()])
+
     def __str__(self):
         return ''.join(str(square) for square in self.squares)
 
@@ -410,38 +413,44 @@ def n_in_n_simplification(puzzle, pencil_marks, n=2):
 
 
 def candidate_line_simplification(puzzle, pencil_marks):
-    def candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit):
-        def remove(unit_type, unit_id):
-            # other squares in unit
-            l = (square for square in puzzle.units[unit_type][unit_id] if square.box != box.id)
-            # remove those that are solved
-            l = (square for square in l if not square.solved())
-            # remove the ones that don't have the digit in their pencil marks
-            l = (square for square in l if digit in pencil_marks[square])
-            # remove the digit from the pencil marks
-            l = [pencil_marks[square].remove(digit) for square in l]
-            #print("Removing %d from %d squares in %s %d" % (digit, len(l), unit_type, unit_id))
-            return len(l)
+    def find_others(unit_type, unit_id):
+        # other squares in unit
+        l = (square for square in puzzle.units[unit_type][unit_id] if square.box != box.id)
+        # remove those that are solved
+        l = (square for square in l if not square.solved())
+        # remove the ones that don't have the digit in their pencil marks
+        l = (square for square in l if digit in pencil_marks[square])
+        return list(l)
 
-        positions = set(square for square in box.missing() if digit in pencil_marks[square])
-        rows = set(square.row for square in positions)
-        r_count = remove('row', rows.pop()) if len(rows) == 1 else 0
-        cols = set(square.col for square in positions)
-        c_count = remove('col', cols.pop()) if len(cols) == 1 else 0
-        return r_count + c_count
+    for box in puzzle.units['box']:
+        for digit in box.missing_digits():
+            possible_positions = set(square for square in box.missing() if digit in pencil_marks[square])
+            rows = set(square.row for square in possible_positions)
+            if len(rows) == 1:
+                others = find_others('row', rows.pop())
+                if len(others) > 0:
+                    return SimplificationMove(pencil_marks,
+                                              '%d appears in one row in box %d' % (digit, box.id + 1),
+                                              [(square, digit) for square in others])
+            cols = set(square.col for square in possible_positions)
+            if len(cols) == 1:
+                others = find_others('col', cols.pop())
+                if len(others) > 0:
+                    return SimplificationMove(pencil_marks,
+                                              '%d appears in one col in box %d' % (digit, box.id + 1),
+                                              [(square, digit) for square in others])
 
-    return sum(candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit)
-               for box in puzzle.units['box'] for digit in digits)
 
 class MoveExecutor:
     def __init__(self, generate_images=True):
         self.image_counter = 1
+        self.moves_counter = 1
         self.generate_images = generate_images
 
     def execute(self, move, puzzle, pencil_marks=None):
-        print('executing move %d: %s' % (self.image_counter, move.describe()))
         self.show(move, puzzle, pencil_marks)
         move.execute()
+        self.moves_counter += 1
         self.show(move, puzzle, pencil_marks)
 
         if pencil_marks is not None:
@@ -465,6 +474,38 @@ class MoveExecutor:
 
 
 def run_assisted_solver(puzzle, generate_images=True):
+    def simplify_and_exhaust(simplify_function, parameters):
+        any_move = True
+        while any_move:
+            any_move = False
+
+            move = simplify_function(*parameters)
+            if move:
+                any_move = True
+                executor.execute(move, puzzle, pencil_marks)
+
+            # exhaust single candidate by pencil mark (extremely visible to humans)!
+            move = single_candidate_by_pencil_marks(puzzle, pencil_marks)
+            while move:
+                any_move = True
+                executor.execute(move, puzzle, pencil_marks)
+                move = single_candidate_by_pencil_marks(puzzle, pencil_marks)
+
+            move = single_position_by_pencil_marks(puzzle, pencil_marks)
+            while move:
+                any_move = True
+                executor.execute(move, puzzle, pencil_marks)
+                # exhaust single candidate by pencil mark (extremely visible to humans)!
+                move = single_candidate_by_pencil_marks(puzzle, pencil_marks)
+                while move:
+                    any_move = True
+                    executor.execute(move, puzzle, pencil_marks)
+                    move = single_candidate_by_pencil_marks(puzzle, pencil_marks)
+                # exhausted, try single position again
+                move = single_position_by_pencil_marks(puzzle, pencil_marks)
+
+
+
     executor = MoveExecutor(generate_images)
 
     # run single_position and single_candidate to exhaustion
@@ -486,7 +527,7 @@ def run_assisted_solver(puzzle, generate_images=True):
 
     # arriving here means that neither single_position nor single_candidate could produce any more
     if puzzle.solved():
-        return True
+        return executor.moves_counter
 
     # create pencil marks
     pencil_marks = PencilMarks(puzzle)
@@ -496,34 +537,8 @@ def run_assisted_solver(puzzle, generate_images=True):
     assert single_candidate_by_pencil_marks(puzzle, pencil_marks) is None
     assert single_position_by_pencil_marks(puzzle, pencil_marks) is None
 
-    # try 2_in_2 and single_candidate_by_pencil_marks & single_position_by_pencil_marks interchangeably until exhausted
-    any_move = True
-    while any_move:
-        any_move = False
+    simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks])
 
-        move = n_in_n_simplification(puzzle, pencil_marks)
-        if move:
-            any_move = True
-            executor.execute(move, puzzle, pencil_marks)
+    return executor.moves_counter
 
-        # exhaust single candidate by pencil mark (extremely visible to humans)!
-        move = single_candidate_by_pencil_marks(puzzle, pencil_marks)
-        while move:
-            any_move = True
-            executor.execute(move, puzzle, pencil_marks)
-            move = single_candidate_by_pencil_marks(puzzle, pencil_marks)
 
-        move = single_position_by_pencil_marks(puzzle, pencil_marks)
-        while move:
-            any_move = True
-            executor.execute(move, puzzle, pencil_marks)
-            # exhaust single candidate by pencil mark (extremely visible to humans)!
-            move = single_candidate_by_pencil_marks(puzzle, pencil_marks)
-            while move:
-                any_move = True
-                executor.execute(move, puzzle, pencil_marks)
-                move = single_candidate_by_pencil_marks(puzzle, pencil_marks)
-            # exhausted, try single position again
-            move = single_position_by_pencil_marks(puzzle, pencil_marks)
-
-    return puzzle.solved()
