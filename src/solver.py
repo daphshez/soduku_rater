@@ -409,6 +409,30 @@ def n_in_n_simplification(puzzle, pencil_marks, n=2):
                     return SimplificationMove(pencil_marks, message, [(square, candidates) for square in others])
 
 
+def candidate_line_simplification(puzzle, pencil_marks):
+    def candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit):
+        def remove(unit_type, unit_id):
+            # other squares in unit
+            l = (square for square in puzzle.units[unit_type][unit_id] if square.box != box.id)
+            # remove those that are solved
+            l = (square for square in l if not square.solved())
+            # remove the ones that don't have the digit in their pencil marks
+            l = (square for square in l if digit in pencil_marks[square])
+            # remove the digit from the pencil marks
+            l = [pencil_marks[square].remove(digit) for square in l]
+            #print("Removing %d from %d squares in %s %d" % (digit, len(l), unit_type, unit_id))
+            return len(l)
+
+        positions = set(square for square in box.missing() if digit in pencil_marks[square])
+        rows = set(square.row for square in positions)
+        r_count = remove('row', rows.pop()) if len(rows) == 1 else 0
+        cols = set(square.col for square in positions)
+        c_count = remove('col', cols.pop()) if len(cols) == 1 else 0
+        return r_count + c_count
+
+    return sum(candidate_line_simplification_iteration(puzzle, pencil_marks, box, digit)
+               for box in puzzle.units['box'] for digit in digits)
+
 class MoveExecutor:
     def __init__(self, generate_images=True):
         self.image_counter = 1
