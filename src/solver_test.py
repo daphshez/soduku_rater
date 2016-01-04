@@ -2,49 +2,52 @@ import unittest
 
 from solver import *
 from itertools import product
+from collections import namedtuple
 
-easy1 = """
-. . .|1 . 6|. . .
-. 6 5|. . .|9 4 .
-. . 7|. . .|8 . .
------+-----+-----
-. 5 8|. 4 .|1 7 .
-. . .|9 . 1|. . .
-. 4 9|. 8 .|6 3 .
------+-----+-----
-. . 3|. . .|5 . .
-. 8 2|. . .|7 1 .
-. . .|3 . 2|. . .
-"""
+Example = namedtuple('Example', ('source', 'level', 'description', 'puzzle', 'solution'))
 
-easy1_solution = """
-824 196 357
-365 728 941
-917 435 826
+examples = {}
 
-258 643 179
-736 951 284
-149 287 635
+examples['easy'] = Example('The Times', 'easy', 'Published December 2015', """
+    . . .|1 . 6|. . .
+    . 6 5|. . .|9 4 .
+    . . 7|. . .|8 . .
+    -----+-----+-----
+    . 5 8|. 4 .|1 7 .
+    . . .|9 . 1|. . .
+    . 4 9|. 8 .|6 3 .
+    -----+-----+-----
+    . . 3|. . .|5 . .
+    . 8 2|. . .|7 1 .
+    . . .|3 . 2|. . .
+""", """
+    824 196 357
+    365 728 941
+    917 435 826
 
-673 814 592
-482 569 713
-591 372 468
-"""
+    258 643 179
+    736 951 284
+    149 287 635
 
-beginner1 = """
-.89 2.7 .6.
-652 .38 71.
-7.. .61 .9.
+    673 814 592
+    482 569 713
+    591 372 468
+""")
 
-5.3 8.9 .4.
-476 ... 8.9
-... 6.4 537
+examples['begginer'] = Example('App', 'beginner', '', """
+    .89 2.7 .6.
+    652 .38 71.
+    7.. .61 .9.
+    -----------
+    5.3 8.9 .4.
+    476 ... 8.9
+    ... 6.4 537
 
-.6. 41. ..2
-.4. 79. ...
-.1. ..2 45."""
+    .6. 41. ..2
+    .4. 79. ...
+    .1. ..2 45.""", None)
 
-fiendish_7862 = """
+examples['fiendish'] = Example('The Times', 'fiendish', 'Published December 2015', """
         . . .| . . . | . 9 .
         1 . .| . . . | 8 . 2
         . 5 .| 6 9 . | . 1 .
@@ -56,228 +59,160 @@ fiendish_7862 = """
         . 3 2| 4 . . | . . .
         . . 8| 7 2 . | 3 . .
         . . .| . 3 6 | . 8 .
-        """
+        """, None)
 
-bbt = """
-... | 893 | ...
-..2 | ... | ...
-7.3 | .62 | .8.
----------------
-..1 | 64. | .9.
-..9 | .3. | 8..
-.4. | .89 | 2..
----------------
-.1. | 42. | 6.9
-... | ... | 4..
-... | 976 | ...
-"""
+examples['bbt'] = Example('App', 'master', '', """
+        ... | 893 | ...
+        ..2 | ... | ...
+        7.3 | .62 | .8.
+        ---------------
+        ..1 | 64. | .9.
+        ..9 | .3. | 8..
+        .4. | .89 | 2..
+        ---------------
+        .1. | 42. | 6.9
+        ... | ... | 4..
+        ... | 976 | ...
+        """, None)
 
-bbt2 = """
-. 1 4 | 5 . . | . 7 .
-8 . . | . . 4 | 6 . 1
-. . . | . . . | . 2 .
----------------------
-. . 6 | 4 . . | 1 . .
-. . . | . 3 . | . . .
-. . 1 | . . 9 | 2 . .
----------------------
-. 2 . | . . . | . . .
-3 . 5 | 6 . . | . . 2
-. 8 . | . . 7 | 5 6 .
-"""
-#
-# def compact(grid_string):
-#     return ''.join(c for c in grid_string if c.isdigit() or c == '.')
-#
-#
-# class TestDataStructures(unittest.TestCase):
-#     def test_find_box(self):
-#         self.assertEqual(find_box(0, 0), (0, 0))
-#         self.assertEqual(find_box(1, 1), (0, 4))
-#         self.assertEqual(find_box(4, 4), (4, 4))
-#
-#     def test_find_row_col(self):
-#         self.assertEqual(find_row_col(29), (3, 2))
-#         self.assertEqual(find_row_col(38), (4, 2))
-#         self.assertEqual(find_row_col(80), (8, 8))
-#
-#     def test_unit_set_get(self):
-#         square = Square(1, 1)
-#         unit = Unit()
-#         unit[2] = square
-#         self.assertEqual(unit[2], square)
-#
-#     def test_unit_solved(self):
-#         unit = Unit()
-#         for i in range(9):
-#             unit[i] = Square(0, i)
-#         self.assertFalse(unit.solved())
-#         for i in range(8):
-#             unit[i].digit = i + 1
-#             self.assertFalse(unit.solved())
-#         unit[8].digit = 9
-#         self.assertTrue(unit.solved())
-#
-#     def test_unit_missing(self):
-#         unit = Unit()
-#         for i in range(9):
-#             unit[i] = Square(0, i, i + 1)
-#         unit[0].digit = None
-#         self.assertEqual(unit.missing(), [unit[0]])
-#
-#     def test_unit_str(self):
-#         unit = Unit()
-#         for i in range(9):
-#             unit[i] = Square(0, i, i + 1)
-#         self.assertEqual(str(unit), '123456789')
-#
-#     def test_puzzle_set_get(self):
-#         puzzle = Puzzle()
-#         square = Square(col=2, row=3, digit=1)
-#         puzzle[(3, 2)] = square
-#         self.assertEqual(square, puzzle[3, 2])
-#
-#     def test_puzzle_correct_unit(self):
-#         puzzle = Puzzle()
-#         square = Square(col=2, row=3, digit=1)
-#         puzzle[(3, 2)] = square
-#         self.assertEqual(square, puzzle.unit('row', 3)[2])
-#         self.assertEqual(square, puzzle.unit('col', 2)[3])
-#         self.assertEqual(square, puzzle.unit('box', 3)[2])
-#
-#     def test_fill_puzzle(self):
-#         puzzle = Puzzle()
-#         for row, col in product(range(9), range(9)):
-#             self.assertFalse(puzzle.ready())
-#             puzzle[(row, col)] = Square(row, col)
-#         self.assertTrue(puzzle.ready())
-#
-#     def test_puzzle_from_string(self):
-#         puzzle = Puzzle.from_string(fiendish_7862)
-#         self.assertTrue(puzzle.ready())
-#         self.assertEqual(str(puzzle), compact(fiendish_7862))
-#
-#     def test_puzzle_is_consistent(self):
-#         self.assertTrue(Puzzle.from_string(easy1_solution).is_consistent())
-#         non_consistent = '1' + easy1_solution.strip()[1:]
-#         self.assertFalse(Puzzle.from_string(non_consistent).is_consistent())
-#
-#     def test_puzzle_from_matrix(self):
-#         m = [[1, 2, 3, 4, 5, 6, 7, 8, 9]
-#             , [9, 0, 0, 0, 0, 0, 0, 0, 0]
-#             , [8, 0, 0, 0, 0, 0, 0, 0, 0]
-#             , [0, 0, 0, 0, 0, 0, 0, 0, 0]
-#             , [0, 0, 0, 0, 0, 0, 0, 0, 0]
-#             , [0, 0, 0, 0, 0, 0, 0, 0, 0]
-#             , [0, 0, 0, 0, 0, 0, 0, 0, 0]
-#             , [0, 0, 0, 0, 0, 0, 0, 0, 0]
-#             , [0, 0, 0, 0, 0, 0, 0, 0, 0]]
-#         puzzle = Puzzle.from_matrix(m)
-#         self.assertEqual(str(puzzle), '123456789' + '9' + (8 * '.') + '8' + (8 * '.') + (6 * 9 * '.'))
-#
-#     def test_chute_boxes(self):
-#         puzzle = Puzzle.from_string(easy1_solution)
-#         chutes = [[box.id for box in chute] for chute_type, chute in puzzle.chutes_boxes()]
-#         self.assertEqual([[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8]], chutes)
-#         top_left_digit = [[box[0].digit for box in chute] for chute_type, chute in puzzle.chutes_boxes()]
-#         self.assertEqual([[8, 1, 3], [2, 6, 1], [6, 8, 5], [8, 2, 6], [1, 6,8], [3, 1, 5]], top_left_digit)
-#
-#
-#
-# class TestOneEmptySquare(unittest.TestCase):
-#     def runner(self, f):
-#         grid = '.' + easy1_solution.strip()[1:]
-#         puzzle = Puzzle.from_string(grid)
-#         assignments_per_iter = f(puzzle)
-#         self.assertEqual(assignments_per_iter, [1, 0])
-#         self.assertTrue(puzzle.solved())
-#         self.assertEqual(compact(easy1_solution), str(puzzle))
-#
-#     def test_single_position_box(self):
-#         self.runner(single_position_box)
-#
-#     def test_single_candidate(self):
-#         self.runner(single_candidate)
-#
-#     def test_single_position_color(self):
-#         self.runner(single_position_by_color)
-#
-#     def test_single_candidate_by_pencil_marks(self):
-#         grid = '.' + easy1_solution.strip()[1:]
-#         puzzle = Puzzle.from_string(grid)
-#         pencil_marks = PencilMarks(puzzle)
-#         assignments_per_iter = single_candidate_by_pencil_marks(puzzle, pencil_marks)
-#         self.assertEqual(assignments_per_iter, [1, 0])
-#         self.assertTrue(puzzle.solved())
-#         self.assertEqual(compact(easy1_solution), str(puzzle))
-#
-#
-# class TestPencilMark(unittest.TestCase):
-#     def test_one_empty_square(self):
-#         grid = '.' + easy1_solution.strip()[1:]
-#         puzzle = Puzzle.from_string(grid)
-#         marks = PencilMarks(puzzle)
-#         self.assertEqual(marks[puzzle[(0, 0)]], {8})
-#
-#
-# def solving_fiendish_7862():
-#     puzzle = Puzzle.from_string(fiendish_7862)
-#
-#     print("Running single position by color")
-#     print(single_position_by_color(puzzle), puzzle.solved())
-#
-#     pencil_marks = PencilMarks(puzzle)
-#     print("running now, single candidate by pencil marks")
-#     print(single_candidate_by_pencil_marks(puzzle, pencil_marks), puzzle.solved())
-#
-#     print("Running single position by color")
-#     print(single_position_by_color(puzzle), puzzle.solved())
-#
-#
-#     print("Running candidate line pencil mark simplification")
-#     print(candidate_line_simplification(puzzle, pencil_marks))
-#
-#     print("Running single candidate by pencil marks, again")
-#     print(single_candidate_by_pencil_marks(puzzle, pencil_marks))
-#
-#     print('single position by color, again', single_position_by_color(puzzle))
-#     print('is solved?', puzzle.solved())
-#     show(puzzle)
-#
-#
-# def solving_bbt():
-#     puzzle = Puzzle.from_string(bbt)
-#     print("Running single position by color")
-#     print(single_position_by_color(puzzle), puzzle.solved())
-#     pencil_marks = PencilMarks(puzzle)
-#
-#     print("running single candidate by pencil marks")
-#     print(single_candidate_by_pencil_marks(puzzle, pencil_marks), puzzle.solved())
-#
-#     print("Running candidate line pencil mark simplification")
-#     print(candidate_line_simplification(puzzle, pencil_marks))
-#
-#     print("running n_in_n_simplification with n=2")
-#     print(n_in_n_simplification(puzzle, pencil_marks, 2))
-#
-#     print("running now, single candidate by pencil marks")
-#     print(single_candidate_by_pencil_marks(puzzle, pencil_marks), puzzle.solved())
+examples['bbt2'] = Example('App', 'master', 'bbt2', """
+        . 1 4 | 5 . . | . 7 .
+        8 . . | . . 4 | 6 . 1
+        . . . | . . . | . 2 .
+        ---------------------
+        . . 6 | 4 . . | 1 . .
+        . . . | . 3 . | . . .
+        . . 1 | . . 9 | 2 . .
+        ---------------------
+        . 2 . | . . . | . . .
+        3 . 5 | 6 . . | . . 2
+        . 8 . | . . 7 | 5 6 .
+        """, None)
+
+examples['horrible'] = Example('App', 'master', 'cannot be solved with only 2-in-2 and 3-in-3 simplification', """
+        1 5 . | . 7 3 | . . .
+        . . . | 9 . . | . . 7
+        9 . . | . . . | . . .
+        ---------------------
+        5 . 9 | 1 . . | 7 . .
+        3 . 8 | 5 4 7 | 9 . 1
+        . . 1 | . . 9 | 4 . 3
+        ---------------------
+        . . . | . . . | . . 8
+        2 . . | . . 5 | . . .
+        . . . | 2 9 . | . 3 4
+        """, None)
+
+
+def compact(grid_string):
+    return ''.join(c for c in grid_string if c.isdigit() or c == '.')
+
+
+class TestDataStructures(unittest.TestCase):
+    def test_find_box(self):
+        self.assertEqual(find_box(0, 0), (0, 0))
+        self.assertEqual(find_box(1, 1), (0, 4))
+        self.assertEqual(find_box(4, 4), (4, 4))
+
+    def test_find_row_col(self):
+        self.assertEqual(find_row_col(29), (3, 2))
+        self.assertEqual(find_row_col(38), (4, 2))
+        self.assertEqual(find_row_col(80), (8, 8))
+
+    def test_unit_set_get(self):
+        square = Square(1, 1)
+        unit = Unit()
+        unit[2] = square
+        self.assertEqual(unit[2], square)
+
+    def test_unit_solved(self):
+        unit = Unit()
+        for i in range(9):
+            unit[i] = Square(0, i)
+        self.assertFalse(unit.solved())
+        for i in range(8):
+            unit[i].digit = i + 1
+            self.assertFalse(unit.solved())
+        unit[8].digit = 9
+        self.assertTrue(unit.solved())
+
+    def test_unit_missing(self):
+        unit = Unit()
+        for i in range(9):
+            unit[i] = Square(0, i, i + 1)
+        unit[0].digit = None
+        self.assertEqual(unit.missing(), [unit[0]])
+
+    def test_unit_str(self):
+        unit = Unit()
+        for i in range(9):
+            unit[i] = Square(0, i, i + 1)
+        self.assertEqual(str(unit), '123456789')
+
+    def test_puzzle_set_get(self):
+        puzzle = Puzzle()
+        square = Square(col=2, row=3, digit=1)
+        puzzle[(3, 2)] = square
+        self.assertEqual(square, puzzle[3, 2])
+
+    def test_puzzle_correct_unit(self):
+        puzzle = Puzzle()
+        square = Square(col=2, row=3, digit=1)
+        puzzle[(3, 2)] = square
+        self.assertEqual(square, puzzle.unit('row', 3)[2])
+        self.assertEqual(square, puzzle.unit('col', 2)[3])
+        self.assertEqual(square, puzzle.unit('box', 3)[2])
+
+    def test_fill_puzzle(self):
+        puzzle = Puzzle()
+        for row, col in product(range(9), range(9)):
+            self.assertFalse(puzzle.ready())
+            puzzle[(row, col)] = Square(row, col)
+        self.assertTrue(puzzle.ready())
+
+    def test_puzzle_from_string(self):
+        puzzle = Puzzle.from_string(examples['fiendish'].puzzle)
+        self.assertTrue(puzzle.ready())
+        self.assertEqual(str(puzzle), compact(examples['fiendish'].puzzle))
+
+    def test_puzzle_is_consistent(self):
+        self.assertTrue(Puzzle.from_string(examples['easy'].solution).is_consistent())
+        non_consistent = '1' + examples['easy'].solution.strip()[1:]
+        self.assertFalse(Puzzle.from_string(non_consistent).is_consistent())
+
+    def test_puzzle_from_matrix(self):
+        m = [[1, 2, 3, 4, 5, 6, 7, 8, 9]
+            , [9, 0, 0, 0, 0, 0, 0, 0, 0]
+            , [8, 0, 0, 0, 0, 0, 0, 0, 0]
+            , [0, 0, 0, 0, 0, 0, 0, 0, 0]
+            , [0, 0, 0, 0, 0, 0, 0, 0, 0]
+            , [0, 0, 0, 0, 0, 0, 0, 0, 0]
+            , [0, 0, 0, 0, 0, 0, 0, 0, 0]
+            , [0, 0, 0, 0, 0, 0, 0, 0, 0]
+            , [0, 0, 0, 0, 0, 0, 0, 0, 0]]
+        puzzle = Puzzle.from_matrix(m)
+        self.assertEqual(str(puzzle), '123456789' + '9' + (8 * '.') + '8' + (8 * '.') + (6 * 9 * '.'))
+
+    def test_chute_boxes(self):
+        puzzle = Puzzle.from_string(examples['easy'].solution)
+        chutes = [[box.id for box in chute] for chute_type, chute in puzzle.chutes_boxes()]
+        self.assertEqual([[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8]], chutes)
+        top_left_digit = [[box[0].digit for box in chute] for chute_type, chute in puzzle.chutes_boxes()]
+        self.assertEqual([[8, 1, 3], [2, 6, 1], [6, 8, 5], [8, 2, 6], [1, 6, 8], [3, 1, 5]], top_left_digit)
+
+class TestAssistedSolver(unittest.TestCase):
+    def test_one_empty_square(self):
+        grid = '.' + examples['easy'].solution.strip()[1:]
+        puzzle = Puzzle.from_string(grid)
+        self.assertTrue(run_assisted_solver(puzzle, False))
+
+    def test_all_examples(self):
+        for name, example in examples.items():
+            puzzle = Puzzle.from_matrix(example.puzzle)
+            self.assertTrue(run_assisted_solver(puzzle, False), 'Failed to solve %s ' % name)
 
 
 if __name__ == '__main__':
-    #     puzzle = Puzzle.from_string(easy1)
-    #     pencil_marks = PencilMarks(puzzle)
-    #
-    #     print("Running candidate line pencil mark simplification")
-    # #    print(candidate_line_simplification(puzzle, pencil_marks))
-    #
-    #     print("running n_in_n_simplification with n=2")
-    #     print(n_in_n_simplification(puzzle, pencil_marks, 2))
-    #     show(puzzle, pencil_marks)
-    #
-    #
-    #     #print("running n_in_n_simplification with n=3")
-    #     #print(n_in_n_simplification(puzzle, pencil_marks, 3))
-    puzzle = Puzzle.from_string(bbt2)
+    puzzle = Puzzle.from_string(examples['horrible'].puzzle)
     if run_assisted_solver(puzzle):
         print("Puzzle solved!")

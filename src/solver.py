@@ -410,8 +410,9 @@ def n_in_n_simplification(puzzle, pencil_marks, n=2):
 
 
 class MoveExecutor:
-    def __init__(self):
+    def __init__(self, generate_images=True):
         self.image_counter = 1
+        self.generate_images = generate_images
 
     def execute(self, move, puzzle, pencil_marks=None):
         print('executing move %d: %s' % (self.image_counter, move.describe()))
@@ -421,15 +422,16 @@ class MoveExecutor:
 
         if pencil_marks is not None:
             changed_squares = pencil_marks.update()
-            if len(changed_squares) > 0:
+            if len(changed_squares) > 0 and self.generate_images:
                 show(puzzle, pencil_marks=pencil_marks, filename='../tmp/%d.png' % self.image_counter, display=False,
                      caption='pencil marks updated', highlight=changed_squares)
                 self.image_counter += 1
 
     def pencil_marks_generated(self, puzzle, pencil_marks):
-        show(puzzle, pencil_marks=pencil_marks, filename='../tmp/%d.png' % self.image_counter, display=False,
-             caption='pencil marks generated', highlight=set(pencil_marks.marks.keys()))
-        self.image_counter += 1
+        if self.generate_images:
+            show(puzzle, pencil_marks=pencil_marks, filename='../tmp/%d.png' % self.image_counter, display=False,
+                 caption='pencil marks generated', highlight=set(pencil_marks.marks.keys()))
+            self.image_counter += 1
 
     def show(self, move, puzzle, pencil_marks=None):
         highlight = set((square.row, square.col) for square in move.squares())
@@ -438,8 +440,8 @@ class MoveExecutor:
         self.image_counter += 1
 
 
-def run_assisted_solver(puzzle):
-    executor = MoveExecutor()
+def run_assisted_solver(puzzle, generate_images=True):
+    executor = MoveExecutor(generate_images)
 
     # run single_position and single_candidate to exhaustion
     any_move = True
