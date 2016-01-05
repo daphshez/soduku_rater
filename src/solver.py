@@ -412,7 +412,7 @@ def n_in_n_simplification(puzzle, pencil_marks, n=2):
                     return SimplificationMove(pencil_marks, message, [(square, candidates) for square in others])
 
 
-def candidate_line_simplification(puzzle, pencil_marks):
+def single_line_in_box_simplification(puzzle, pencil_marks):
     def find_others(unit_type, unit_id):
         # other squares in unit
         l = (square for square in puzzle.units[unit_type][unit_id] if square.box != box.id)
@@ -538,7 +538,7 @@ def run_assisted_solver(puzzle, generate_images=True):
     assert single_position_by_pencil_marks(puzzle, pencil_marks) is None
 
     simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 2])
-    simplify_and_exhaust(candidate_line_simplification, [puzzle, pencil_marks])
+    simplify_and_exhaust(single_line_in_box_simplification, [puzzle, pencil_marks])
     simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 3])
     simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 2])
 
