@@ -431,14 +431,14 @@ def candidate_line_simplification(puzzle, pencil_marks):
                 if len(others) > 0:
                     return SimplificationMove(pencil_marks,
                                               '%d appears in one row in box %d' % (digit, box.id + 1),
-                                              [(square, digit) for square in others])
+                                              [(square, [digit]) for square in others])
             cols = set(square.col for square in possible_positions)
             if len(cols) == 1:
                 others = find_others('col', cols.pop())
                 if len(others) > 0:
                     return SimplificationMove(pencil_marks,
                                               '%d appears in one col in box %d' % (digit, box.id + 1),
-                                              [(square, digit) for square in others])
+                                              [(square, [digit]) for square in others])
 
 
 class MoveExecutor:
@@ -537,7 +537,10 @@ def run_assisted_solver(puzzle, generate_images=True):
     assert single_candidate_by_pencil_marks(puzzle, pencil_marks) is None
     assert single_position_by_pencil_marks(puzzle, pencil_marks) is None
 
-    simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks])
+    simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 2])
+    simplify_and_exhaust(candidate_line_simplification, [puzzle, pencil_marks])
+    simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 3])
+    simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 2])
 
     return executor.moves_counter
 
