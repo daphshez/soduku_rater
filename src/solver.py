@@ -1,4 +1,4 @@
-from itertools import product, combinations
+from itertools import product, combinations, chain
 from PIL import Image, ImageFont, ImageDraw
 
 digits = set(range(1, 10))
@@ -31,6 +31,14 @@ class Square:
     @property
     def box(self):
         return find_box(self.row, self.col)[0]
+
+    def unit(self, unit_type):
+        if unit_type == 'row':
+            return self.row
+        elif unit_type == 'col':
+            return self.col
+        elif unit_type == 'box':
+            return self.box
 
     def solved(self):
         return self.digit is not None
@@ -441,6 +449,22 @@ def single_line_in_box_simplification(puzzle, pencil_marks):
                                               [(square, [digit]) for square in others])
 
 
+def single_box_in_a_line_simplification(puzzle, pencil_marks):
+    for unit in chain(puzzle.units['row'], puzzle.units['col']):
+        for digit in unit.missing_digits():
+            boxes = set(square.box for square in unit.missing() if digit in pencil_marks[square])
+            if len(boxes) == 1:
+                box = boxes.pop()
+                others = (square for square in puzzle.units['box'][box] if square.unit(unit.type) != unit.id)
+                others = (square for square in others if not square.solved())
+                others = [square for square in others if digit in pencil_marks[square]]
+                if len(others) > 0:
+                    return SimplificationMove(pencil_marks,
+                                              '%d appears only in one box in %s %d' % (digit, unit.type, unit.id + 1),
+                                              [(square, [digit]) for square in others])
+
+
+
 class MoveExecutor:
     def __init__(self, generate_images=True):
         self.image_counter = 1
@@ -467,10 +491,11 @@ class MoveExecutor:
             self.image_counter += 1
 
     def show(self, move, puzzle, pencil_marks=None):
-        highlight = set((square.row, square.col) for square in move.squares())
-        show(puzzle, pencil_marks=pencil_marks, filename='../tmp/%d.png' % self.image_counter, display=False,
-             caption=move.describe(), highlight=highlight)
-        self.image_counter += 1
+        if self.generate_images:
+            highlight = set((square.row, square.col) for square in move.squares())
+            show(puzzle, pencil_marks=pencil_marks, filename='../tmp/%d.png' % self.image_counter, display=False,
+                 caption=move.describe(), highlight=highlight)
+            self.image_counter += 1
 
 
 def run_assisted_solver(puzzle, generate_images=True):
@@ -538,9 +563,15 @@ def run_assisted_solver(puzzle, generate_images=True):
     assert single_position_by_pencil_marks(puzzle, pencil_marks) is None
 
     simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 2])
-    simplify_and_exhaust(single_line_in_box_simplification, [puzzle, pencil_marks])
     simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 3])
+    simplify_and_exhaust(single_line_in_box_simplification, [puzzle, pencil_marks])
+    simplify_and_exhaust(single_box_in_a_line_simplification, [puzzle, pencil_marks])
     simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 2])
+    simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 3])
+    simplify_and_exhaust(single_box_in_a_line_simplification, [puzzle, pencil_marks])
+    simplify_and_exhaust(single_box_in_a_line_simplification, [puzzle, pencil_marks])
+    simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 2])
+    simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 3])
 
     return executor.moves_counter
 

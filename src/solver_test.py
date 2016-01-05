@@ -206,13 +206,16 @@ class TestAssistedSolver(unittest.TestCase):
         puzzle = Puzzle.from_string(grid)
         self.assertTrue(run_assisted_solver(puzzle, False))
 
-    def test_all_examples(self):
-        for name, example in examples.items():
-            puzzle = Puzzle.from_matrix(example.puzzle)
-            self.assertTrue(run_assisted_solver(puzzle, False), 'Failed to solve %s ' % name)
-
+def solve_everything():
+    for name in sorted(examples):
+        puzzle = Puzzle.from_matrix(examples[name].puzzle)
+        moves = run_assisted_solver(puzzle, False)
+        if puzzle.solved():
+            message = '%s: solved successfully in %d move(s)' % (name, moves)
+        else:
+            message = '%s: remains unsolved after %d move(s)' % (name, moves)
+        print(message)
 
 if __name__ == '__main__':
-    puzzle = Puzzle.from_string(examples['horrible'].puzzle)
-    if run_assisted_solver(puzzle):
-        print("Puzzle solved!")
+    solve_everything()
+
