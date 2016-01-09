@@ -103,6 +103,20 @@ examples['horrible'] = Example('App', 'master', 'cannot be solved with only 2-in
         . . . | 2 9 . | . 3 4
         """, None)
 
+examples['bbt3'] = Example('App', 'Master', '?', """
+. . . | 1 9 5 | . . .
+. . . | . . . | . . 6
+. 3 . |  . 4 6 | 5 . 1
+----------------------
+. 6 . | 5 7 . | . . 4
+5 . . | . 8 . | . . 7
+3 . . | . 6 1 | . 5 .
+---------------------
+8 . 9 | 4 1 . | . 7 .
+4 . . | . . . | . . .
+. . . | 8 5 7 | . . .
+""", None)
+
 
 def compact(grid_string):
     return ''.join(c for c in grid_string if c.isdigit() or c == '.')
