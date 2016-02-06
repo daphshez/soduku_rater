@@ -118,6 +118,35 @@ examples['bbt3'] = Example('App', 'Master', '?', """
 """, None)
 
 
+examples['bbt4'] = Example('App', 'Master', '?', """
+. . 6 | . . 7 | 8 . 2
+. . . | 2 5 . | . . .
+. 7 . | . . 9 | . 3 .
+
+4 . . | 1 . . | . . 8
+. . . | 9 8 2 | . . .
+8 . . | . . 3 | . . 1
+
+. 1 . | 3 . . | . 6 .
+. . . | . 9 6 | . . .
+6 . 9 | 7 . . | 3 . .
+""", None)
+
+# http://www.dailymail.co.uk/news/article-2166680/True-test-genius-monumental-waste-time-Can-solve-hardest-Sudoku.html
+examples['daily_mail'] = Example('Daily Mail', '11', '?', """
+8 . . | . . . | . . .
+. . 3 | 6 . . | . . .
+. 7 . | . 9 . | 2 . .
+
+. 5 . | . . 7 | . . .
+. . . | . 4 5 | 7 . .
+. . . | 1 . . | . 3 .
+
+. . 1 | . . . | . 6 8
+. . 8 | 5 . . | . 1 .
+. 9 . | . . . | 4 . .
+""", None)
+
 def compact(grid_string):
     return ''.join(c for c in grid_string if c.isdigit() or c == '.')
 
@@ -231,5 +260,7 @@ def solve_everything():
         print(message)
 
 if __name__ == '__main__':
-    solve_everything()
+    # solve_everything()
+    puzzle = Puzzle.from_matrix(examples['daily_mail'].puzzle)
+    print(run_assisted_solver(puzzle))
 

@@ -573,6 +573,11 @@ def run_assisted_solver(puzzle, generate_images=True):
     simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 2])
     simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 3])
 
+    simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 4])
+    simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 5])
+    simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 6])
+    simplify_and_exhaust(n_in_n_simplification, [puzzle, pencil_marks, 8])
+
     return executor.moves_counter
 
 
